@@ -1,0 +1,23 @@
+{
+	"title":title,
+	"location_string":location_string,
+	"location_latlon":location_latlon,
+	"date_publication":date_publication,
+	"state":state,
+	"deliver":deliver,
+	"price":price,
+	"description_sup":description_sup,
+	"description":description,
+	"pictures":pictures,
+	"advertiser_code":advertiser_code,
+	"advertiser_code_plusvalia":advertiser_code_plusvalia,
+	"advertiser_lic":advertiser_lic,
+	"feature_unities":feature_unities,
+	"feature_stotal":feature_stotal,
+	"feature_scover":feature_scover,
+	"feature_bath":feature_bath,
+	"feature_parking":feature_parking,
+	"feature_toilete":feature_toilete,
+	"feature_antique":feature_antique,
+	"extra_discover":extra_discover
+}
