@@ -1,0 +1,85 @@
+// this is generated automatically
+{
+    "_id" : "test",
+    "mobile" : "test",
+    "device_id" : "n/a",
+    "chat_w_id" : "n/a",
+    "name" : "",
+    "require_human" : false,
+    "last_message" : "goodbye",
+    "date_require_human" : "",
+    "date_first_client_interaction" : "",
+    "date_last_client_interaction" : "",
+    "date_last_bot_interaction" : "",
+    "context" : {
+        "current_agent" : "broker",
+        "history" : {
+            "2022-02-06 15:40:18" : {
+                "client_message" : "hello",
+                "bot_message" : [ 
+                    "hola", 
+                    "a", 
+                    "ti"
+                ],
+                "agents" : [ 
+                    "broker", 
+                    "cb00", 
+                    "broker"
+                ],
+                "tags" : [ 
+                    "cb00", 
+                    "greetings"
+                ],
+                "require_human" : false,
+                "tags_probabilities" : [ 
+                    {
+                        "cb00" : 56.8523,
+                        "cb01" : 43.1477
+                    }, 
+                    {
+                        "greetings" : 66.2401,
+                        "bye" : 33.7599
+                    }, 
+                    {}
+                ]
+            },
+            "2022-02-06 15:40:32" : {
+                "client_message" : "goodbye",
+                "bot_message" : [ 
+                    "ciao", 
+                    "oh"
+                ],
+                "agents" : [ 
+                    "broker", 
+                    "cb00", 
+                    "broker"
+                ],
+                "tags" : [ 
+                    "cb00", 
+                    "bye"
+                ],
+                "require_human" : false,
+                "tags_probabilities" : [ 
+                    {
+                        "cb00" : 57.2659,
+                        "cb01" : 42.7341
+                    }, 
+                    {
+                        "bye" : 50.1896,
+                        "greetings" : 49.8104
+                    }, 
+                    {}
+                ]
+            }
+        },
+        "tags_first_message_sent" : [],
+        "states" : {},
+        "memory_intents" : [],
+        "person_type" : "",
+        "input_memory" : {}
+    },
+    "username" : "",
+    "app_context" : "",
+    "brain_name" : "",
+    "show_bot_presentation" : true
+}
