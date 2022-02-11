@@ -20,7 +20,7 @@ class Neat:
     WEIGHT_RANDOM_STRENGTH:float = 1
 
     PROBABILITY_MUTATE_LINK:float = 0.01
-    PROBABILITY_MUTATE_NODE:float = 0.1
+    PROBABILITY_MUTATE_NODE:float = 0.9
     PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.02
     PROBABILITY_MUTATE_WEIGHT_RANDOM:float = 0.02
     PROBABILITY_MUTATE_TOGGLE_LINK:float = 0
@@ -55,7 +55,7 @@ class Neat:
         self.WEIGHT_SHIFT_STRENGTH:float = 0.3
         self.WEIGHT_RANDOM_STRENGTH:float = 1
         self.PROBABILITY_MUTATE_LINK:float = 0.01
-        self.PROBABILITY_MUTATE_NODE:float = 0.0003
+        self.PROBABILITY_MUTATE_NODE:float = 0.01
         self.PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.02
         self.PROBABILITY_MUTATE_WEIGHT_RANDOM:float = 0.02
         self.PROBABILITY_MUTATE_TOGGLE_LINK:float = 0
@@ -85,6 +85,7 @@ class Neat:
 
         for i in range(self.max_clients):
             genome:Genome = self.empty_genome()
+            genome.reconnectNodes()
             self.genomes.add(genome)
     
 
@@ -108,7 +109,7 @@ class Neat:
         self.all_connections[key].replace_index = index
 
 
-    def getReplaceIndex(self, node1:NodeGene, node2:NodeGene)->None:
+    def getReplaceIndex(self, node1:NodeGene, node2:NodeGene)->int:
         connectionGene:ConnectionGene = ConnectionGene(node1,node2)
         key = connectionGene.hashCode()
         data:ConnectionGene = self.all_connections.get(key, None)
@@ -130,9 +131,12 @@ class Neat:
     
     def empty_genome(self) -> Genome:
 
-        g:Genome = Genome()
+        nodes:RandomHashSet = RandomHashSet()
         for i in range(self.input_size+self.output_size):
-            g.nodes.add(self.getNode(i+1))
+            nodes.add(self.getNode(i+1))
+
+        # todo: ensure is passed by reference
+        g:Genome = Genome(nodes)
 
         return g
 
@@ -142,6 +146,7 @@ class Neat:
         # return Genome
         genome1:Genome = specieFrom.genomes.randomElement()
         genome2:Genome = specieFrom.genomes.randomElement()
+
 
         genome_base:Genome = self.empty_genome()
         
@@ -160,6 +165,7 @@ class Neat:
 
     def evolve(self)->None:
 
+
         self.genSpecies()
         self.kill()
         self.removeExtinctSpecies()
@@ -172,7 +178,9 @@ class Neat:
 
         for i in range(len(self.genomes.data)):
             genome:Genome = self.genomes.data[i]
-            genome.id_specie = -1
+            genome.reconnectNodes()
+
+        
 
 
     def printSpecies(self)->None:
@@ -197,9 +205,14 @@ class Neat:
             if genome.id_specie == -1:
                 s:Specie = selector.random()
                 # break new genome
-                self.genomes.data[i] = self.breedFromSpecie(s)
+                genome_new:Genome = self.breedFromSpecie(s) # B
+                genome_new.input_nodes = genome.input_nodes
+                genome_new.hidden_nodes = genome.hidden_nodes
+                genome_new.output_nodes = genome.output_nodes
+
+                self.genomes.data[i] = genome_new
                 # force this client into the specie
-                s.forcePut(self.genomes.data[i])
+                s.forcePut(genome_new)
                 
 
     def mutate(self)->None:
@@ -299,6 +312,7 @@ class Neat:
             
             if genome.id_specie != -1:
                 continue
+
 
             found:bool = False
             for j in range(len(self.species.data)):

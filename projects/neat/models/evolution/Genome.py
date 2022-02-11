@@ -30,17 +30,28 @@ class Genome:
         self.CP:float = CP
 
         self.connections = RandomHashSet()
-        self.nodes = RandomHashSet()
+        self.nodes = nodes
 
         self.score:float = 0
+
+
+        self.input_nodes:list = [] # type: Node
+        self.hidden_nodes:list = [] # type: Node
+        self.output_nodes:list = [] # type: Node
+        
+
+        # self.reconnectNodes()
+        
+    def reconnectNodes(self):
+
 
         self.input_nodes:list = [] # type: Node
         self.hidden_nodes:list = [] # type: Node
         self.output_nodes:list = [] # type: Node
 
         nodeHashMap = dict() # HashMap<Integer, Node>
-        for i in range(len(nodes.data)):
-            n:NodeGene = nodes.data[i]
+        for i in range(len(self.nodes.data)):
+            n:NodeGene = self.nodes.data[i]
             node:Node = Node(n.x)
 
             nodeHashMap[n.innovation_number] = node
@@ -183,6 +194,7 @@ class Genome:
 
         index_g1 = 0
         index_g2 = 0
+
 
         while index_g1 < g1.connections.size() and index_g2 < g2.connections.size():
 
