@@ -1,5 +1,5 @@
 import random
-from ..nodes.NodeGene import Gene 
+from ..network.Gene import Gene 
 
 # data structures
 class RandomHashSet:

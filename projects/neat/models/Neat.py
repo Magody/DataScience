@@ -1,20 +1,15 @@
 import random
-
-from sympy import C
 from .data_structures.RandomHashSet import RandomHashSet
 from .data_structures.RandomSelector import RandomSelector
 from .evolution.Genome import Genome
-from .nodes.NodeGene import *
+from .network.Neuron import *
 from .evolution.Specie import Specie
-
-
+from .network.Activation import ActivationFunction
 
 class Neat:
 
-    
 
     SURVIVORS:float = 0.8
-
 
     WEIGHT_SHIFT_STRENGTH:float = 0.3
     WEIGHT_RANDOM_STRENGTH:float = 1
@@ -74,14 +69,12 @@ class Neat:
         self.genomes.clear()
 
         for i in range(input_size):
-            n:NodeGene = self.getNodeCommon()
-            n.x = 0.1
-            n.y = (i+1)/float(input_size+1)
+            y = (i+1)/float(input_size+1)
+            n:Neuron = self.getNeuronNew(0.1,y,ActivationFunction.sigmoid)
 
         for i in range(output_size):
-            n:NodeGene = self.getNodeCommon()
-            n.x = 0.9
-            n.y = (i+1)/float(output_size+1)
+            y = (i+1)/float(output_size+1)
+            n:Neuron = self.getNeuronNew(0.9,y,ActivationFunction.sigmoid)
 
         for i in range(self.max_clients):
             genome:Genome = self.empty_genome()
@@ -89,9 +82,9 @@ class Neat:
             self.genomes.add(genome)
     
 
-    def getConnection(self, node1:NodeGene, node2:NodeGene)->ConnectionGene:
+    def getConnection(self, node1:Neuron, node2:Neuron)->Connection:
 
-        connectionGene:ConnectionGene = ConnectionGene(node1,node2)
+        connectionGene:Connection = Connection(node1,node2)
 
         key = connectionGene.hashCode()
         if key in self.all_connections:
@@ -103,37 +96,38 @@ class Neat:
         
         return connectionGene
 
-    def setReplaceIndex(self, node1:NodeGene, node2:NodeGene, index:int)->None:
-        connectionGene:ConnectionGene = ConnectionGene(node1,node2)
+    def setReplaceIndex(self, node1:Neuron, node2:Neuron, index:int)->None:
+        connectionGene:Connection = Connection(node1,node2)
         key = connectionGene.hashCode()
         self.all_connections[key].replace_index = index
 
 
-    def getReplaceIndex(self, node1:NodeGene, node2:NodeGene)->int:
-        connectionGene:ConnectionGene = ConnectionGene(node1,node2)
+    def getReplaceIndex(self, node1:Neuron, node2:Neuron)->int:
+        connectionGene:Connection = Connection(node1,node2)
         key = connectionGene.hashCode()
-        data:ConnectionGene = self.all_connections.get(key, None)
+        data:Connection = self.all_connections.get(key, None)
 
         if data is None:
             return 0
         return data.replace_index
 
-    def getNodeCommon(self)->NodeGene:
-        n:NodeGene = NodeGene(self.all_nodes.size()+1)
+    def getNeuronNew(self,x:float,y:float,activation_function)->Neuron:
+        n:Neuron = Neuron(x,y,self.all_nodes.size()+1,activation_function)
         self.all_nodes.add(n)
         return n
 
-    def getNode(self,id:int)->NodeGene:
+    def getNeuron(self,id:int,x:float=-1,y:float=-1)->Neuron:
+        # singleton
         if id <= self.all_nodes.size():
             return self.all_nodes.get(id-1)
-        return self.getNodeCommon()
+        return self.getNeuronNew(x,y,ActivationFunction.sigmoid)
 
     
     def empty_genome(self) -> Genome:
 
         nodes:RandomHashSet = RandomHashSet()
         for i in range(self.input_size+self.output_size):
-            nodes.add(self.getNode(i+1))
+            nodes.add(self.getNeuron(i+1))
 
         # todo: ensure is passed by reference
         g:Genome = Genome(nodes)
@@ -230,8 +224,8 @@ class Neat:
     def mutateGenomeLink(self, genome:Genome, trysearch=100):
 
         for i in range(trysearch):
-            a:NodeGene = genome.nodes.randomElement()
-            b:NodeGene = genome.nodes.randomElement()
+            a:Neuron = genome.neurons.randomElement()
+            b:Neuron = genome.neurons.randomElement()
 
             if a is None or b is None:
                 continue
@@ -240,45 +234,46 @@ class Neat:
                 continue
 
 
-            con:ConnectionGene = None
+            con:Connection = None
             if a.x < b.x:
-                con = ConnectionGene(a,b)
+                con = Connection(a,b)
             else:
-                con = ConnectionGene(b,a)
+                con = Connection(b,a)
 
             if genome.connections.contains(con):
                 continue
 
-            con = self.getConnection(con.from_gene, con.to_gene)
+            con = self.getConnection(con.from_neuron, con.to_neuron)
             con.weight = (random.random() * 2 - 1) * self.WEIGHT_RANDOM_STRENGTH
 
             genome.connections.addSorted(con) # check if is connections from genome or neat
             return
 
     def mutateGenomeNode(self, genome:Genome):
-        con:ConnectionGene = genome.connections.randomElement()
+        con:Connection = genome.connections.randomElement()
         if con is None:
             return
 
-        from_gene:NodeGene = con.from_gene
-        to_gene:NodeGene = con.to_gene
+        from_neuron:Neuron = con.from_neuron
+        to_neuron:Neuron = con.to_neuron
 
-        replace_index:int = self.getReplaceIndex(from_gene,to_gene)
+        replace_index:int = self.getReplaceIndex(from_neuron,to_neuron)
 
-        middle:NodeGene = None
+        middle:Neuron = None
 
         if replace_index == 0:
-            middle:NodeGene = self.getNodeCommon()
-            middle.x = (from_gene.x + to_gene.x)/2
-            middle.y = (from_gene.y + to_gene.y)/2 + (random.random() * 0.1 - 0.05)
-            self.setReplaceIndex(from_gene,to_gene,middle.innovation_number)
+            x = (from_neuron.x + to_neuron.x)/2
+            y = (from_neuron.y + to_neuron.y)/2 + (random.random() * 0.1 - 0.05)
+
+            middle:Neuron = self.getNeuronNew(x,y,ActivationFunction.sigmoid)
+            self.setReplaceIndex(from_neuron,to_neuron,middle.innovation_number)
         else:
-            middle = self.getNode(replace_index)
+            middle = self.getNeuron(replace_index)
 
         
 
-        con1:ConnectionGene = self.getConnection(from_gene,middle)
-        con2:ConnectionGene = self.getConnection(middle,to_gene)
+        con1:Connection = self.getConnection(from_neuron,middle)
+        con2:Connection = self.getConnection(middle,to_neuron)
 
         con1.weight = 1
         con2.weight = con.weight
@@ -288,7 +283,7 @@ class Neat:
         genome.connections.add(con1)
         genome.connections.add(con2)
 
-        genome.nodes.add(middle)
+        genome.neurons.add(middle)
 
     def removeExtinctSpecies(self)->None:
         i:int = self.species.size()-1

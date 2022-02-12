@@ -1,7 +1,6 @@
 import random
 from ..data_structures.RandomHashSet import RandomHashSet
-from ..nodes.NodeGene import *
-from ..nodes.Node import *
+from ..network.Neuron import *
 
 class Genome:
     C1:float = 1
@@ -18,9 +17,9 @@ class Genome:
     id_specie: int = -1
 
     connections:RandomHashSet = None  # ConnectionGene type
-    nodes:RandomHashSet = None # NodeGene type
+    neurons:RandomHashSet = None # NodeGene type
 
-    def __init__(self,nodes,C1=1,C2=1,C3=1,CP=4):
+    def __init__(self,neurons,C1=1,C2=1,C3=1,CP=4):
 
         self.id_specie = -1
 
@@ -30,7 +29,7 @@ class Genome:
         self.CP:float = CP
 
         self.connections = RandomHashSet()
-        self.nodes = nodes
+        self.neurons = neurons
 
         self.score:float = 0
 
@@ -50,29 +49,30 @@ class Genome:
         self.output_nodes:list = [] # type: Node
 
         nodeHashMap = dict() # HashMap<Integer, Node>
-        for i in range(len(self.nodes.data)):
-            n:NodeGene = self.nodes.data[i]
-            node:Node = Node(n.x)
+        for i in range(len(self.neurons.data)):
+            neuron:Neuron  = self.neurons.data[i]
 
-            nodeHashMap[n.innovation_number] = node
+            nodeHashMap[neuron.innovation_number] = neuron
 
-            if n.x <= 0.1:
-                self.input_nodes.append(node)
-            elif n.x >= 0.9:
-                self.output_nodes.append(node)
+            if neuron.x <= 0.1:
+                self.input_nodes.append(neuron)
+            elif neuron.x >= 0.9:
+                self.output_nodes.append(neuron)
+            elif neuron.x == -1:
+                raise Exception("Error in neuron assignation")
             else:
-                self.hidden_nodes.append(node)
+                self.hidden_nodes.append(neuron)
 
-        self.hidden_nodes.sort(key=lambda nod: nod.x, reverse=True)
+        self.hidden_nodes.sort(key=lambda neuron: neuron.x, reverse=True)
 
-        # todo: where goes this code?
+
         for i in range(len(self.connections.data)):
-            c:ConnectionGene = self.connections.data[i]
-            from_gene:NodeGene = c.from_gene
-            to_gene:NodeGene = c.to_gene
+            c:Connection = self.connections.data[i]
+            from_neuron:Neuron = c.from_neuron
+            to_neuron:Neuron = c.to_neuron
 
-            from_node:Node = nodeHashMap[from_gene.innovation_number]
-            to_node:Node = nodeHashMap[to_gene.innovation_number]
+            from_node:Neuron = nodeHashMap[from_neuron.innovation_number]
+            to_node:Neuron = nodeHashMap[to_neuron.innovation_number]
 
             con:Connection = Connection(from_node,to_node)
             con.weight = c.weight
@@ -111,8 +111,8 @@ class Genome:
         similar:int = 0
 
         while index_g1 < g1.connections.size() and index_g2 < g2.connections.size():
-            gene1:ConnectionGene = g1.connections.get(index_g1)
-            gene2:ConnectionGene = g2.connections.get(index_g2)
+            gene1:Connection = g1.connections.get(index_g1)
+            gene2:Connection = g2.connections.get(index_g2)
 
             in1:int = gene1.innovation_number
             in2:int = gene2.innovation_number
@@ -143,21 +143,21 @@ class Genome:
 
 
     def mutateWeightShift(self, WEIGHT_SHIFT_STRENGTH): 
-        con:ConnectionGene = self.connections.randomElement()
+        con:Connection = self.connections.randomElement()
         if not con is None:
             con.weight = con.weight + ((random.random()*2-1) * WEIGHT_SHIFT_STRENGTH)
         
     def mutateWeightRandom(self, WEIGHT_RANDOM_STRENGTH): 
-        con:ConnectionGene = self.connections.randomElement()
+        con:Connection = self.connections.randomElement()
         if not con is None:
             con.weight = ((random.random()*2-1) * WEIGHT_RANDOM_STRENGTH)
         
     def mutateLinkToggle(self):
-        con:ConnectionGene = self.connections.randomElement()
+        con:Connection = self.connections.randomElement()
         if not con is None:
             con.enabled = not con.enabled
 
-    def calculate(self,input:list)->list:
+    def forward(self,input:list)->list:
         # input double
         if len(input) != len(self.input_nodes):
             raise Exception("Data doesn't fit")
@@ -168,12 +168,12 @@ class Genome:
 
         # forward hidden
         for n in self.hidden_nodes:
-            n.calculate()
+            n.forward()
 
         output:list = [0 for _ in range(len(self.output_nodes))]
 
         for i in range(len(self.output_nodes)):
-            self.output_nodes[i].calculate()
+            self.output_nodes[i].forward()
             output[i] = self.output_nodes[i].output
 
         return output
@@ -199,8 +199,8 @@ class Genome:
 
         while index_g1 < g1.connections.size() and index_g2 < g2.connections.size():
 
-            gene1:ConnectionGene = g1.connections.get(index_g1)
-            gene2:ConnectionGene = g2.connections.get(index_g2)
+            gene1:Connection = g1.connections.get(index_g1)
+            gene2:Connection = g2.connections.get(index_g2)
 
             in1:int = gene1.innovation_number
             in2:int = gene2.innovation_number
@@ -208,9 +208,9 @@ class Genome:
             if in1 == in2:
                 # similar gene
                 if random.random() > 0.5:
-                    genome.connections.add(ConnectionGene.getConnectionStatic(gene1))
+                    genome.connections.add(Connection.getConnectionStatic(gene1))
                 else:
-                    genome.connections.add(ConnectionGene.getConnectionStatic(gene2))
+                    genome.connections.add(Connection.getConnectionStatic(gene2))
                 index_g1 += 1
                 index_g2 += 1
             elif in1 > in2:
@@ -219,18 +219,18 @@ class Genome:
                 index_g2 += 1
             else:
                 # disjoint gene of a
-                genome.connections.add(ConnectionGene.getConnectionStatic(gene1))
+                genome.connections.add(Connection.getConnectionStatic(gene1))
                 index_g1 += 1
 
         
         while index_g1 < g1.connections.size():
-            gene1:ConnectionGene = g1.connections.get(index_g1)
-            genome.connections.add(ConnectionGene.getConnectionStatic(gene1))
+            gene1:Connection = g1.connections.get(index_g1)
+            genome.connections.add(Connection.getConnectionStatic(gene1))
             index_g1 += 1
 
         for c in genome.connections.data:
-            genome.nodes.add(c.from_gene) 
-            genome.nodes.add(c.to_gene) 
+            genome.neurons.add(c.from_neuron) 
+            genome.neurons.add(c.to_neuron) 
 
         return genome
         
