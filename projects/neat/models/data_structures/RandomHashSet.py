@@ -26,20 +26,6 @@ class RandomHashSet:
         if object not in self.hashSet:
             self.hashSet.add(object)
             self.data.append(object)
-    
-    def addSorted(self,object:Gene):
-
-        for i in range(self.size()):
-            gene:Gene = self.data[i]
-            innovation = gene.innovation_number
-            if object.innovation_number < innovation:
-                self.hashSet.add(object)
-                self.data.insert(i,object)
-                return
-
-
-        self.hashSet.add(object)
-        self.data.append(object)
 
     def clear(self):
         self.hashSet.clear()

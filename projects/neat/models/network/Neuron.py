@@ -1,7 +1,11 @@
 import math
-import random
 from .Gene import Gene
 
+class EnumConnectionTypes:
+    TYPE_UNKNOWN = -1
+    TYPE_INPUT = 0
+    TYPE_HIDDEN = 1
+    TYPE_OUTPUT = 2
 
 class Neuron(Gene):
 
@@ -11,33 +15,33 @@ class Neuron(Gene):
     # y: just a helper to determine its position in network
     y:float = 0
 
-    bias:float = 0
-
     activationFunction = None # type function
 
     output:float = 0
-    connections:list = []  # type: Connection
-
 
 
     def __init__(self,x:float,y:float,innovation_number:int,activationFunction):
         super().__init__(innovation_number)
         self.x = x
         self.y = y
-        # self.bias = (random.random() * 2) - 1
         self.output:float = 0
-        self.connections:list = []  # type: Connection
 
         self.activationFunction = activationFunction
 
-    def forward(self):
-        s:float = 0
-        for i in range(len(self.connections)):
-            c:Connection = self.connections[i]
-            if c.enabled:
-                s += c.weight * c.from_neuron.output #+ self.bias
+    def getNeuronType(self)->int:
 
-        self.output = self.activationFunction(s)
+        x_destiny:float = self.x
+        # assume the connection is from input/hidden to hidden
+        connection_type:int = EnumConnectionTypes.TYPE_HIDDEN
+        
+        if x_destiny == 0.1:
+            connection_type = EnumConnectionTypes.TYPE_INPUT
+        elif x_destiny == 0.9:
+            # the connection comes from input/hidden to output
+            connection_type = EnumConnectionTypes.TYPE_OUTPUT
+
+        return connection_type
+
 
 
     def equals(self, object):
@@ -47,13 +51,13 @@ class Neuron(Gene):
         return self.innovation_number == object.innovation_number
 
     def __str__(self):
-        return f"(NodeGene: {self.innovation_number})"
+        return f"(Neuron: {self.innovation_number})"
 
     def hashCode(self):
         return self.innovation_number
 
 class Connection(Gene):
-    # crossed reference with Node
+    # This neurons are copyies and share same innovation number with others
     from_neuron:Neuron = None
     to_neuron:Neuron = None
     weight:float = 0
@@ -83,13 +87,6 @@ class Connection(Gene):
         return int(self.from_neuron.innovation_number * MAX_NODES + self.to_neuron.innovation_number)
     
     @staticmethod
-    def getConnectionStatic(con):
-        """
-        ARG ConnectionGene
-        Return ConnectionGene
-        """
-        c:Connection = Connection(con.from_neuron,con.to_neuron)
-        c.innovation_number = con.innovation_number
-        c.weight = con.weight
-        c.enabled = con.enabled
-        return c
+    def getConnectionType(connection)->int:
+         # interpret the place of connection
+        return connection.to_neuron.getNeuronType()

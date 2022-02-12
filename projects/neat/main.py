@@ -34,7 +34,7 @@ def score(genome:Genome)->float:
                 # 1 XOR 0 = 1, 0 XOR 1 = 1
                 fitness += (output[0] - 0)
 
-    return fitness
+    return fitness/4
 
 
 print("EVOLVING PHASE")
@@ -44,9 +44,8 @@ for i in tqdm(range(epochs)):
         genome.score = score(genome)
         
     neat.evolve()
-
-
-neat.printSpecies()
+    neat.printSpecies()
+    print()
 
 best_score:float = -math.inf
 best_genome:Genome = None

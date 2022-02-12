@@ -8,39 +8,29 @@ from .network.Activation import ActivationFunction
 
 class Neat:
 
+     
+
+    all_connections:dict = dict() # type hashmap<ConnectionGene, ConnectionGene>
+
+    map_neuron_innovation_number:dict = dict() # type <innovation_number:int, sample_x_y:int[2]>. Example: m[2] = (0.1,0.212121)
     
-
-    all_connections = dict() # type hashmap<ConnectionGene, ConnectionGene>
-
-    all_nodes:RandomHashSet = None # type NodeGene
     genomes:RandomHashSet = None # type Genome
     species:RandomHashSet = None # type Specie
 
-    # max_clients:int = 0
-    # output_size:int = 0
-    # input_size:int = 0
-
-
 
     def __init__(self,input_size:int, output_size:int, clients:int):
-        
 
-        
-
-        self.SURVIVORS:float = 0.6
-
-        
         self.all_connections = dict()
-        self.all_nodes = RandomHashSet()
+        self.map_neuron_innovation_number = dict()
         self.genomes = RandomHashSet()
         self.species = RandomHashSet()
 
-
+        self.SURVIVORS:float = 0.6
         self.WEIGHT_SHIFT_STRENGTH:float = 0.01
         self.WEIGHT_RANDOM_STRENGTH:float = 0.01
 
-        self.PROBABILITY_MUTATE_LINK:float = 0.01
-        self.PROBABILITY_MUTATE_NODE:float = 0.1
+        self.PROBABILITY_MUTATE_LINK:float = 0.3
+        self.PROBABILITY_MUTATE_NODE:float = 0.5
         self.PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.02
         self.PROBABILITY_MUTATE_WEIGHT_RANDOM:float = 0.02
         self.PROBABILITY_MUTATE_TOGGLE_LINK:float = 0.01
@@ -55,30 +45,36 @@ class Neat:
         self.max_clients = clients
 
         self.all_connections.clear()
-        self.all_nodes.clear()
+        self.map_neuron_innovation_number.clear()
         self.genomes.clear()
 
+        # creates base input neurons and save them as reference
         for i in range(input_size):
             y = (i+1)/float(input_size+1)
-            n:Neuron = self.getNeuronNew(0.1,y,ActivationFunction.sigmoid)
+            innovation_number:int = i+1
+            self.getNeuronNew(0.1,y,innovation_number,ActivationFunction.sigmoid)
 
+        # creates base output neurons and save them as reference
         for i in range(output_size):
             y = (i+1)/float(output_size+1)
-            n:Neuron = self.getNeuronNew(0.9,y,ActivationFunction.sigmoid)
+            innovation_number:int = input_size + (i+1)
+            self.getNeuronNew(0.9,y,innovation_number,ActivationFunction.sigmoid)
 
+        # creates dynamic genomes list
         for i in range(self.max_clients):
             genome:Genome = self.empty_genome()
-            genome.reconnectNodes()
+            genome.orderNetwork() # may be not necessary
             self.genomes.add(genome)
     
 
     def getConnection(self, node1:Neuron, node2:Neuron)->Connection:
 
+        # have to be a new object with same existing innovation number or new one
         connectionGene:Connection = Connection(node1,node2)
 
         key = connectionGene.hashCode()
         if key in self.all_connections:
-            # todo: check that hashcode is the key
+            # just copy the innovation_number
             connectionGene.innovation_number = self.all_connections[key].innovation_number
         else:
             connectionGene.innovation_number = len(self.all_connections) + 1
@@ -98,31 +94,49 @@ class Neat:
         data:Connection = self.all_connections.get(key, None)
 
         if data is None:
-            return 0
-        return data.replace_index
+            return 0, key
+        return data.replace_index, key
 
-    def getNeuronNew(self,x:float,y:float,activation_function)->Neuron:
-        n:Neuron = Neuron(x,y,self.all_nodes.size()+1,activation_function)
-        self.all_nodes.add(n)
+    def getNeuronNew(self,x:float,y:float,innovation_number:int,activation_function,exist:bool=False)->Neuron:
+        n:Neuron = Neuron(x,y,innovation_number,activation_function)
+        if not exist:
+            # no exist, so add it to storage
+            self.map_neuron_innovation_number[innovation_number] = (n.x,n.y)
         return n
 
-    def getNeuron(self,id:int,x:float=-1,y:float=-1)->Neuron:
-        # singleton
-        if id <= self.all_nodes.size():
-            return self.all_nodes.get(id-1)
-        return self.getNeuronNew(x,y,ActivationFunction.sigmoid)
+    def getNeuron(self,innovation_number_expected:int,x:float=-1,y:float=-1)->Neuron:
+        # singleton for x and y for unique innovation_number        
+
+        len_neurons_created:int = len(self.map_neuron_innovation_number)
+
+        exist:bool = False
+
+        innovation_number:int = len_neurons_created + 1
+        if innovation_number_expected <= len_neurons_created:
+            # in the history this gene was already created
+            innovation_number = innovation_number_expected
+            sample = self.map_neuron_innovation_number[innovation_number]
+            x = sample[0]
+            y = sample[1]
+            exist = True       
+
+        return self.getNeuronNew(x,y,innovation_number,ActivationFunction.sigmoid,exist)
 
     
-    def empty_genome(self) -> Genome:
+    def empty_genome(self, prefill:bool=True) -> Genome:
 
-        nodes:RandomHashSet = RandomHashSet()
-        for i in range(self.input_size+self.output_size):
-            nodes.add(self.getNeuron(i+1))
+        input_neurons:list = []
+        output_neurons:list = []
 
-        # todo: ensure is passed by reference
-        g:Genome = Genome(nodes)
+        if prefill:
 
-        return g
+            for innovation_number in range(1, self.input_size+1):
+                input_neurons.append(self.getNeuron(innovation_number))
+
+            for innovation_number in range(self.input_size+1,self.input_size+self.output_size+1):
+                output_neurons.append(self.getNeuron(innovation_number))
+
+        return Genome(input_neurons,[],output_neurons)
 
     
     # We need the reference control, so this method can't be in Specie
@@ -132,12 +146,17 @@ class Neat:
         genome2:Genome = specieFrom.genomes.randomElement()
 
 
-        genome_base:Genome = self.empty_genome()
+        # no nodes nor connections
+        genome_base:Genome = self.empty_genome(prefill=True)
         
         if genome1.score > genome2.score:
-            return Genome.crossover(genome1,genome2,genome_base)
-        
-        return Genome.crossover(genome2,genome1,genome_base)
+            genome_base = Genome.crossover(genome1,genome2,genome_base)
+        else:
+            genome_base = Genome.crossover(genome2,genome1,genome_base)
+
+        #if len(genome_base.input_neurons) == 0:
+        #    return self.empty_genome(prefill=True)
+        return genome_base
 
 
     def evolve(self)->None:
@@ -152,7 +171,7 @@ class Neat:
 
         for i in range(len(self.genomes.data)):
             genome:Genome = self.genomes.data[i]
-            genome.reconnectNodes()
+            genome.orderNetwork()
 
         
 
@@ -180,9 +199,9 @@ class Neat:
                 s:Specie = selector.random()
                 # break new genome
                 genome_new:Genome = self.breedFromSpecie(s) # B
-                genome_new.input_nodes = genome.input_nodes
-                genome_new.hidden_nodes = genome.hidden_nodes
-                genome_new.output_nodes = genome.output_nodes
+                # genome_new.input_neurons = genome.input_neurons
+                # genome_new.hidden_neurons = genome.hidden_neurons
+                # genome_new.output_neurons = genome.output_neurons
 
                 self.genomes.data[i] = genome_new
                 # force this client into the specie
@@ -211,18 +230,11 @@ class Neat:
             if p_mutate_link_toggle < self.PROBABILITY_MUTATE_TOGGLE_LINK:
                 genome.mutateLinkToggle()
 
-    def mutateGenomeLink(self, genome:Genome, trysearch=100):
+    def mutateGenomeLink(self, genome:Genome):
+        # todo: improve search selection. important!
 
-        for i in range(trysearch):
-            a:Neuron = genome.neurons.randomElement()
-            b:Neuron = genome.neurons.randomElement()
-
-            if a is None or b is None:
-                continue
-
-            if a.x == b.x:
-                continue
-
+        for _ in range(100):
+            a, b = genome.getRandomGenePair()
 
             con:Connection = None
             if a.x < b.x:
@@ -230,50 +242,74 @@ class Neat:
             else:
                 con = Connection(b,a)
 
-            if genome.connections.contains(con):
-                continue
 
             con = self.getConnection(con.from_neuron, con.to_neuron)
+
+            if genome.connections_hash.get(con.innovation_number,False):
+                # if exists or is not set to False, return
+                continue
+
             con.weight = (random.random() * 2 - 1) * self.WEIGHT_RANDOM_STRENGTH
 
-            genome.connections.addSorted(con)
+            
+            genome.insertConnection(con)
             return
 
     def mutateGenomeNode(self, genome:Genome):
-        con:Connection = genome.connections.randomElement()
+        # add hidden node in EXISTING connection
+        con:Connection = genome.getRandomConnection()
+        
         if con is None:
+            # there is no connections yet
             return
+        
 
         from_neuron:Neuron = con.from_neuron
         to_neuron:Neuron = con.to_neuron
 
-        replace_index:int = self.getReplaceIndex(from_neuron,to_neuron)
+        # always split the link into two nodes
+        replace_index, key = self.getReplaceIndex(from_neuron,to_neuron)
 
         middle:Neuron = None
 
-        if replace_index == 0:
+        create_new_node:bool = True
+
+        if replace_index > 0:
+            if not genome.existGene(replace_index):
+                # If already exist a neuron, create a copy
+                middle = self.getNeuron(replace_index)
+                create_new_node = False
+        
+        if create_new_node:
+            # if no previous neuron was created between this connection
             x = (from_neuron.x + to_neuron.x)/2
             y = (from_neuron.y + to_neuron.y)/2 + (random.random() * 0.1 - 0.05)
-
-            middle:Neuron = self.getNeuronNew(x,y,ActivationFunction.sigmoid)
+            innovation_number:int = len(self.map_neuron_innovation_number)+1
+            middle:Neuron = self.getNeuronNew(x,y,innovation_number,ActivationFunction.sigmoid)
             self.setReplaceIndex(from_neuron,to_neuron,middle.innovation_number)
-        else:
-            middle = self.getNeuron(replace_index)
-
         
 
         con1:Connection = self.getConnection(from_neuron,middle)
         con2:Connection = self.getConnection(middle,to_neuron)
 
+        # before link: set weight to 1
         con1.weight = 1
+        # next link: restore the properties of original long connection
         con2.weight = con.weight
         con2.enabled = con.enabled
 
-        genome.connections.remove(con)
-        genome.connections.add(con1)
-        genome.connections.add(con2)
+        # if input [1,2,3] and output [4]
+        # adding hidden node is hidden [5]
+        # originally 1->4, and we want to put the node 5 in middle
+        # now 1->5->4. the original connection 1->4 have to be removed
+        genome.removeConnection(con)
 
-        genome.neurons.add(middle)
+        # the middle is a brand new or existing in general storage mapping
+        genome.insertGene(middle)
+
+        # now we add the segmented connection
+        genome.insertConnection(con1)
+        genome.insertConnection(con2)
 
     def removeExtinctSpecies(self)->None:
         i:int = self.species.size()-1
