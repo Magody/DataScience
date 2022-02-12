@@ -6,9 +6,11 @@ from models.nodes.NodeGene import ConnectionGene
 epochs = 20
 input_size = 10
 
+max_population = 100
+
 
 output_size = 1
-neat:Neat = Neat(input_size,output_size,20)
+neat:Neat = Neat(input_size,output_size,max_population)
 
 inp:list = [0 for _ in range(input_size)]
 for i in range(len(inp)):
@@ -22,8 +24,8 @@ for i in range(epochs):
         genome.score = score
         
     neat.evolve()
-    print(f"END: epoch {i}")
     neat.printSpecies()
+    print(f"END: epoch {i}")
 
 print("INNOVATION READ")
 for i in range(len(neat.genomes.data)):

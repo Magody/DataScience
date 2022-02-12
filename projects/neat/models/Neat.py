@@ -20,7 +20,7 @@ class Neat:
     WEIGHT_RANDOM_STRENGTH:float = 1
 
     PROBABILITY_MUTATE_LINK:float = 0.01
-    PROBABILITY_MUTATE_NODE:float = 0.9
+    PROBABILITY_MUTATE_NODE:float = 0.05
     PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.02
     PROBABILITY_MUTATE_WEIGHT_RANDOM:float = 0.02
     PROBABILITY_MUTATE_TOGGLE_LINK:float = 0
@@ -55,10 +55,10 @@ class Neat:
         self.WEIGHT_SHIFT_STRENGTH:float = 0.3
         self.WEIGHT_RANDOM_STRENGTH:float = 1
         self.PROBABILITY_MUTATE_LINK:float = 0.01
-        self.PROBABILITY_MUTATE_NODE:float = 0.01
+        self.PROBABILITY_MUTATE_NODE:float = 0.1
         self.PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.02
         self.PROBABILITY_MUTATE_WEIGHT_RANDOM:float = 0.02
-        self.PROBABILITY_MUTATE_TOGGLE_LINK:float = 0
+        self.PROBABILITY_MUTATE_TOGGLE_LINK:float = 0.01
 
         self.reset(input_size, output_size, clients)
 
@@ -156,25 +156,15 @@ class Neat:
         return Genome.crossover(genome2,genome1,genome_base)
 
 
-    def check(self,max_data=11)->bool:
-        for i in range(len(self.genomes.data)):
-            genome:Genome = self.genomes.data[i]
-            if genome.nodes.size() > max_data:
-                return genome.nodes
-        return None
-
     def evolve(self)->None:
 
 
         self.genSpecies()
-        self.kill()
-        self.removeExtinctSpecies()
+        self.kill() # reduce poblation a percentaje for each specie, selecting the best
+        self.removeExtinctSpecies() # delete all species with one or less genomes (only representative or none)
         self.reproduce()
         self.mutate()
 
-        nods = self.check(11)
-        if not nods is None:
-            print("Error", nods.size())
 
         for i in range(len(self.genomes.data)):
             genome:Genome = self.genomes.data[i]
@@ -219,15 +209,22 @@ class Neat:
 
         for i in range(len(self.genomes.data)):
             genome:Genome = self.genomes.data[i]
-            if random.random() < self.PROBABILITY_MUTATE_LINK:
+
+            p_mutate_link:float = random.random()
+            p_mutate_node:float = random.random()
+            p_mutate_weight_shift:float = random.random()
+            p_mutate_weight_random:float = random.random()
+            p_mutate_link_toggle:float = random.random()
+
+            if p_mutate_link < self.PROBABILITY_MUTATE_LINK:
                 self.mutateGenomeLink(genome)
-            if random.random() < self.PROBABILITY_MUTATE_NODE:
+            if p_mutate_node < self.PROBABILITY_MUTATE_NODE:
                 self.mutateGenomeNode(genome)
-            if random.random() < self.PROBABILITY_MUTATE_WEIGHT_SHIFT:
+            if p_mutate_weight_shift < self.PROBABILITY_MUTATE_WEIGHT_SHIFT:
                 genome.mutateWeightShift(self.WEIGHT_SHIFT_STRENGTH)
-            if random.random() < self.PROBABILITY_MUTATE_WEIGHT_RANDOM:
+            if p_mutate_weight_random < self.PROBABILITY_MUTATE_WEIGHT_RANDOM:
                 genome.mutateWeightRandom(self.WEIGHT_RANDOM_STRENGTH)
-            if random.random() < self.PROBABILITY_MUTATE_TOGGLE_LINK:
+            if p_mutate_link_toggle < self.PROBABILITY_MUTATE_TOGGLE_LINK:
                 genome.mutateLinkToggle()
 
     def mutateGenomeLink(self, genome:Genome, trysearch=100):
@@ -238,6 +235,10 @@ class Neat:
 
             if a is None or b is None:
                 continue
+
+            if a.x == b.x:
+                continue
+
 
             con:ConnectionGene = None
             if a.x < b.x:

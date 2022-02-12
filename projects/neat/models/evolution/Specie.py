@@ -54,7 +54,7 @@ class Specie:
         
         self.genomes.clear()
         self.genomes.add(self.representative)
-        self.representative.id_species = self.id
+        self.representative.id_specie = self.id
         self.score = 0
 
     def goExtinct(self):
@@ -73,7 +73,7 @@ class Specie:
 
         i:int = 0
         while i < amount:
-            self.genomes.get(0).id_species = -1
+            self.genomes.get(0).id_specie = -1
             self.genomes.removeByIndex(0)
             i += 1
 

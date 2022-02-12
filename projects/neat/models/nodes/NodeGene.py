@@ -51,9 +51,9 @@ class ConnectionGene(Gene):
     def __str__(self):
         return f"(ConnectionGene: from={self.from_gene.innovation_number},to={self.to_gene.innovation_number},weight={self.weight},enabled={self.enabled},innovation_number={self.innovation_number})"
 
-    def hashCode(self):
+    def hashCode(self)->int:
         MAX_NODES = math.pow(2,20)
-        return self.from_gene.innovation_number * MAX_NODES + self.to_gene.innovation_number
+        return int(self.from_gene.innovation_number * MAX_NODES + self.to_gene.innovation_number)
     
     @staticmethod
     def getConnectionStatic(con):

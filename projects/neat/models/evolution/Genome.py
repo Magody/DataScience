@@ -160,12 +160,13 @@ class Genome:
     def calculate(self,input:list)->list:
         # input double
         if len(input) != len(self.input_nodes):
-            print("DEBUG",len(input), len(self.input_nodes))
             raise Exception("Data doesn't fit")
         
+        # Forward input (feed)
         for i in range(len(self.input_nodes)):
             self.input_nodes[i].output = input[i]
 
+        # forward hidden
         for n in self.hidden_nodes:
             n.calculate()
 
