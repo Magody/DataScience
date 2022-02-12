@@ -1,4 +1,5 @@
 import math
+import random
 from .Gene import Gene
 
 
@@ -10,35 +11,34 @@ class Neuron(Gene):
     # y: just a helper to determine its position in network
     y:float = 0
 
-    activation_function = None # type function
+    bias:float = 0
+
+    activationFunction = None # type function
 
     output:float = 0
     connections:list = []  # type: Connection
 
-    def __init__(self,x:float,y:float,innovation_number:int,activation_function=None):
+
+
+    def __init__(self,x:float,y:float,innovation_number:int,activationFunction):
         super().__init__(innovation_number)
         self.x = x
         self.y = y
+        # self.bias = (random.random() * 2) - 1
         self.output:float = 0
         self.connections:list = []  # type: Connection
 
-        if activation_function is None:
-            self.activation_function = self.activationFunction
-        else:
-            self.activation_function = activation_function
+        self.activationFunction = activationFunction
 
     def forward(self):
         s:float = 0
         for i in range(len(self.connections)):
             c:Connection = self.connections[i]
             if c.enabled:
-                s += c.weight * c.from_neuron.output
+                s += c.weight * c.from_neuron.output #+ self.bias
 
         self.output = self.activationFunction(s)
 
-    def activationFunction(self, x:float)->float:
-        # default activation is sigmoid
-        return float(1) / (1 + math.exp(-x))
 
     def equals(self, object):
         if not type(object) is Gene:

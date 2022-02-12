@@ -8,17 +8,6 @@ from .network.Activation import ActivationFunction
 
 class Neat:
 
-
-    SURVIVORS:float = 0.8
-
-    WEIGHT_SHIFT_STRENGTH:float = 0.3
-    WEIGHT_RANDOM_STRENGTH:float = 1
-
-    PROBABILITY_MUTATE_LINK:float = 0.01
-    PROBABILITY_MUTATE_NODE:float = 0.05
-    PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.02
-    PROBABILITY_MUTATE_WEIGHT_RANDOM:float = 0.02
-    PROBABILITY_MUTATE_TOGGLE_LINK:float = 0
     
 
     all_connections = dict() # type hashmap<ConnectionGene, ConnectionGene>
@@ -27,9 +16,9 @@ class Neat:
     genomes:RandomHashSet = None # type Genome
     species:RandomHashSet = None # type Specie
 
-    max_clients:int = 0
-    output_size:int = 0
-    input_size:int = 0
+    # max_clients:int = 0
+    # output_size:int = 0
+    # input_size:int = 0
 
 
 
@@ -38,7 +27,7 @@ class Neat:
 
         
 
-        self.SURVIVORS:float = 0.8
+        self.SURVIVORS:float = 0.6
 
         
         self.all_connections = dict()
@@ -47,8 +36,9 @@ class Neat:
         self.species = RandomHashSet()
 
 
-        self.WEIGHT_SHIFT_STRENGTH:float = 0.3
-        self.WEIGHT_RANDOM_STRENGTH:float = 1
+        self.WEIGHT_SHIFT_STRENGTH:float = 0.01
+        self.WEIGHT_RANDOM_STRENGTH:float = 0.01
+
         self.PROBABILITY_MUTATE_LINK:float = 0.01
         self.PROBABILITY_MUTATE_NODE:float = 0.1
         self.PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.02
@@ -246,7 +236,7 @@ class Neat:
             con = self.getConnection(con.from_neuron, con.to_neuron)
             con.weight = (random.random() * 2 - 1) * self.WEIGHT_RANDOM_STRENGTH
 
-            genome.connections.addSorted(con) # check if is connections from genome or neat
+            genome.connections.addSorted(con)
             return
 
     def mutateGenomeNode(self, genome:Genome):
