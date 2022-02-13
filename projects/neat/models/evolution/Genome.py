@@ -227,7 +227,7 @@ class Genome:
             for j in range(len(hidden_neuron_connections)):
                 c:Connection = hidden_neuron_connections[j]
                 if c.enabled:
-                    hidden_neuron_output += c.weight * c.from_neuron.output
+                    hidden_neuron_output += c.weight * c.from_neuron.output # todo: check bias
             
             hidden_neuron.output = hidden_neuron.activationFunction(hidden_neuron_output)
 
@@ -242,10 +242,10 @@ class Genome:
             for j in range(len(output_neuron_connections)):
                 c:Connection = output_neuron_connections[j]
                 if c.enabled:
-                    output_neuron_output += c.weight * c.from_neuron.output
+                    output_neuron_output += c.weight * c.from_neuron.output # todo: check bias
             
             output_neuron.output = output_neuron.activationFunction(output_neuron_output)
-            Genome.TEST_SCORE += output_neuron_output
+            Genome.TEST_SCORE += abs(output_neuron_output)
             Genome.TEST_SCORE_COUNT += 1
             output[i] = output_neuron.output
 
@@ -391,10 +391,10 @@ class Genome:
                 genome.insertConnection(connection1)
                 index_g1 += 1
 
-        before = [index_g1,len(genome.connections)]
+        # before = [index_g1,len(genome.connections)]
 
-        if before[1] == 0 and len(g1.connections) == 2:
-            print()
+        # if before[1] == 0 and len(g1.connections) == 2:
+        #   print()
 
         while index_g1 < len(g1.connections):
             # todo: check if this is useful

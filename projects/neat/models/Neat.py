@@ -25,14 +25,14 @@ class Neat:
         self.genomes = RandomHashSet()
         self.species = RandomHashSet()
 
-        self.SURVIVORS:float = 0.6
-        self.WEIGHT_SHIFT_STRENGTH:float = 0.01
-        self.WEIGHT_RANDOM_STRENGTH:float = 0.01
+        self.SURVIVORS:float = 0.8
+        self.WEIGHT_SHIFT_STRENGTH:float = 0.5
+        self.WEIGHT_RANDOM_STRENGTH:float = 1 # for normal initialization
 
-        self.PROBABILITY_MUTATE_LINK:float = 0.3
-        self.PROBABILITY_MUTATE_NODE:float = 0.5
-        self.PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.02
-        self.PROBABILITY_MUTATE_WEIGHT_RANDOM:float = 0.02
+        self.PROBABILITY_MUTATE_LINK:float = 0.1
+        self.PROBABILITY_MUTATE_NODE:float = 0.05
+        self.PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.6
+        self.PROBABILITY_MUTATE_WEIGHT_RANDOM:float = 0.01
         self.PROBABILITY_MUTATE_TOGGLE_LINK:float = 0.01
 
         self.reset(input_size, output_size, clients)
@@ -66,7 +66,24 @@ class Neat:
             genome.orderNetwork() # may be not necessary
             self.genomes.add(genome)
     
+    def getBestGenomeInSpecies(self)->Genome:
+        best_score:float = -math.inf
+        best_genome:Genome = None
 
+        for i in range(self.species.size()):
+            specie:Specie = self.species.get(i)
+            if specie.score > best_score:
+                best_score = specie.score
+
+                internal_score:float = -math.inf
+                for j in range(specie.genomes.size()):
+                    g:Genome = specie.genomes.get(j)
+
+                    if g.score > internal_score:
+                        internal_score = g.score
+                        best_genome = g
+        return best_genome
+                        
     def getConnection(self, node1:Neuron, node2:Neuron)->Connection:
 
         # have to be a new object with same existing innovation number or new one
@@ -180,7 +197,8 @@ class Neat:
         print("##########################################")
         for i in range(len(self.species.data)):
             s:Specie = self.species.data[i]
-            print(f"{s} {s.score} {s.size()}")
+            print(f"Specie: {s} {s.score} {s.size()}")
+        print("##########################################")
         
     def reproduce(self)->None:
 
