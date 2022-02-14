@@ -6,6 +6,23 @@ from .network.Neuron import *
 from .evolution.Specie import Specie
 from .network.Activation import ActivationFunction
 
+class NeatConfig:
+
+    def __init__(
+        self, 
+        SURVIVORS:float=0.8,
+        WEIGHT_SHIFT_STRENGTH:float=0.8,
+        WEIGHT_RANDOM_STRENGTH:float=0.8,
+        PROBABILITY_MUTATE:float = 0.8,
+        MAX_NEURONS:int = 10
+    ):
+        self.SURVIVORS:float = SURVIVORS
+        self.WEIGHT_SHIFT_STRENGTH:float = WEIGHT_SHIFT_STRENGTH
+        self.WEIGHT_RANDOM_STRENGTH:float = WEIGHT_RANDOM_STRENGTH # for normal initialization too
+        self.PROBABILITY_MUTATE:float = PROBABILITY_MUTATE
+        self.MAX_NEURONS:int = MAX_NEURONS
+
+
 class Neat:
 
      
@@ -18,22 +35,14 @@ class Neat:
     species:RandomHashSet = None # type Specie
 
 
-    def __init__(self,input_size:int, output_size:int, clients:int):
+    def __init__(self, config:NeatConfig, input_size:int, output_size:int, clients:int):
+
+        self.config = config
 
         self.all_connections = dict()
         self.map_neuron_innovation_number = dict()
         self.genomes = RandomHashSet()
-        self.species = RandomHashSet()
-
-        self.SURVIVORS:float = 0.8
-        self.WEIGHT_SHIFT_STRENGTH:float = 0.5
-        self.WEIGHT_RANDOM_STRENGTH:float = 1 # for normal initialization
-
-        self.PROBABILITY_MUTATE_LINK:float = 0.1
-        self.PROBABILITY_MUTATE_NODE:float = 0.05
-        self.PROBABILITY_MUTATE_WEIGHT_SHIFT:float = 0.6
-        self.PROBABILITY_MUTATE_WEIGHT_RANDOM:float = 0.01
-        self.PROBABILITY_MUTATE_TOGGLE_LINK:float = 0.01
+        self.species = RandomHashSet()        
 
         self.reset(input_size, output_size, clients)
 
@@ -155,12 +164,91 @@ class Neat:
 
         return Genome(input_neurons,[],output_neurons)
 
+
+    def selectBestGenomes(self,amount=2,method="elitist"):
+        # todo: improve performance
+        best_individuals_values:list = [-math.inf for _ in range(amount)]
+        best_individuals_index:list = [-1 for _ in range(amount)]
+
+        best_individuals:list = []
+
+        if method == "elitist":
+
+            for i in range(len(self.genomes)):
+                genome:Genome = self.genomes[i]
+
+                individual_fitness = genome.score
+
+                first_min_value:int = math.inf
+                first_min_index:int = -1
+                for j,val1 in enumerate(best_individuals_values):
+                    if val1 < first_min_value:
+                        first_min_value = val1
+                        first_min_index = j
+
+
+                if individual_fitness > first_min_value:
+                    best_individuals_values[first_min_index] = individual_fitness
+                    best_individuals_index[first_min_index] = i
+
+        else:
+            raise Exception("method not allowed for selection")
+
+        best_individuals_index:list = [-1 for _ in range(amount)]
+
+        best_individuals:list = []
+
+        for index in best_individuals_index:
+            best_individuals.append(self.genomes[index])
+
+        return best_individuals
+
+    def selectBestGenomesFromSpecie(self,specie:Specie,amount=2,method="elitist"):
+        # todo: improve performance
+        best_individuals_values:list = [-math.inf for _ in range(amount)]
+        best_individuals_index:list = [-1 for _ in range(amount)]
+
+        best_individuals:list = []
+
+
+        if method == "elitist":
+
+            for i in range(specie.genomes.size()):
+                genome:Genome = specie.genomes.get(i)
+
+                individual_fitness = genome.score
+
+                first_min_value:int = math.inf
+                first_min_index:int = -1
+                for j,val1 in enumerate(best_individuals_values):
+                    if val1 < first_min_value:
+                        first_min_value = val1
+                        first_min_index = j
+
+
+                if individual_fitness > first_min_value:
+                    best_individuals_values[first_min_index] = individual_fitness
+                    best_individuals_index[first_min_index] = i
+
+        else:
+            raise Exception("method not allowed for selection")
+
+        best_individuals:list = []
+
+        for index in best_individuals_index:
+            best_individuals.append(specie.genomes.get(index))
+
+
+        return best_individuals
+
+
     
     # We need the reference control, so this method can't be in Specie
     def breedFromSpecie(self, specieFrom:Specie)->Genome:
         # return Genome
-        genome1:Genome = specieFrom.genomes.randomElement()
-        genome2:Genome = specieFrom.genomes.randomElement()
+        best_genomes:list = self.selectBestGenomesFromSpecie(specieFrom)
+        genome1:Genome = best_genomes[0]
+        genome2:Genome = best_genomes[1]
 
 
         # no nodes nor connections
@@ -179,8 +267,8 @@ class Neat:
     def evolve(self)->None:
 
 
-        self.genSpecies()
-        self.kill() # reduce poblation a percentaje for each specie, selecting the best
+        self.speciate()
+        self.reducePopulation() # reduce poblation a percentaje for each specie, selecting the best
         self.removeExtinctSpecies() # delete all species with one or less genomes (only representative or none)
         self.reproduce()
         self.mutate()
@@ -191,8 +279,6 @@ class Neat:
             genome.orderNetwork()
 
         
-
-
     def printSpecies(self)->None:
         print("##########################################")
         for i in range(len(self.species.data)):
@@ -209,7 +295,10 @@ class Neat:
             s:Specie = self.species.data[i]
             selector.add(s,s.score)
         
-        
+        # todo: optimize function
+        to_remove = []
+        to_add = []
+
         for i in range(len(self.genomes.data)):
             genome:Genome = self.genomes.data[i]
             # if the specie is dead select a random
@@ -217,13 +306,19 @@ class Neat:
                 s:Specie = selector.random()
                 # break new genome
                 genome_new:Genome = self.breedFromSpecie(s) # B
-                # genome_new.input_neurons = genome.input_neurons
-                # genome_new.hidden_neurons = genome.hidden_neurons
-                # genome_new.output_neurons = genome.output_neurons
 
-                self.genomes.data[i] = genome_new
+                
+                to_add.append(genome_new)
+                to_remove.append(genome)
                 # force this client into the specie
                 s.forcePut(genome_new)
+
+        # needed not to change array while iterating
+        for genome_new in to_add:
+            self.genomes.add(genome_new)
+        for genome in to_remove:
+            self.genomes.remove(genome)
+
                 
 
     def mutate(self)->None:
@@ -231,26 +326,34 @@ class Neat:
         for i in range(len(self.genomes.data)):
             genome:Genome = self.genomes.data[i]
 
-            p_mutate_link:float = random.random()
-            p_mutate_node:float = random.random()
-            p_mutate_weight_shift:float = random.random()
-            p_mutate_weight_random:float = random.random()
-            p_mutate_link_toggle:float = random.random()
+            p:float = random.random()
 
-            if p_mutate_link < self.PROBABILITY_MUTATE_LINK:
-                self.mutateGenomeLink(genome)
-            if p_mutate_node < self.PROBABILITY_MUTATE_NODE:
-                self.mutateGenomeNode(genome)
-            if p_mutate_weight_shift < self.PROBABILITY_MUTATE_WEIGHT_SHIFT:
-                genome.mutateWeightShift(self.WEIGHT_SHIFT_STRENGTH)
-            if p_mutate_weight_random < self.PROBABILITY_MUTATE_WEIGHT_RANDOM:
-                genome.mutateWeightRandom(self.WEIGHT_RANDOM_STRENGTH)
-            if p_mutate_link_toggle < self.PROBABILITY_MUTATE_TOGGLE_LINK:
-                genome.mutateLinkToggle()
+            if p < self.config.PROBABILITY_MUTATE:
+                # mutate
+                mutate_methods:list = [0,1,2,3]
 
-    def mutateGenomeLink(self, genome:Genome):
+                mutate_method:int = mutate_methods[random.randint(0,len(mutate_methods)-1)]
+
+                if mutate_method == 0:
+                    if not self.mutateGenomeLink(genome):
+                        genome.mutateWeightShift(self.config.WEIGHT_SHIFT_STRENGTH)
+                elif mutate_method == 1:
+                    if len(genome.hidden_neurons) < self.config.MAX_NEURONS:
+                        self.mutateGenomeNode(genome)
+                    else:
+                        genome.mutateWeightShift(self.config.WEIGHT_SHIFT_STRENGTH)
+                elif mutate_method == 2:
+                    genome.mutateWeightShift(self.config.WEIGHT_SHIFT_STRENGTH)
+                elif mutate_method == 3:
+                    genome.mutateLinkToggle()
+                # elif mutate_method == 4:
+                #    genome.mutateWeightRandom(self.WEIGHT_RANDOM_STRENGTH)
+
+                
+
+    def mutateGenomeLink(self, genome:Genome)->bool:
         # todo: improve search selection. important!
-
+        added:bool = False
         for _ in range(100):
             a, b = genome.getRandomGenePair()
 
@@ -263,15 +366,17 @@ class Neat:
 
             con = self.getConnection(con.from_neuron, con.to_neuron)
 
-            if genome.connections_hash.get(con.innovation_number,False):
+            if genome.existConnection(con.innovation_number):
                 # if exists or is not set to False, return
                 continue
 
-            con.weight = (random.random() * 2 - 1) * self.WEIGHT_RANDOM_STRENGTH
+            con.weight = (random.random() * 2 - 1) * self.config.WEIGHT_RANDOM_STRENGTH
 
             
             genome.insertConnection(con)
-            return
+            added = True
+            break
+        return added
 
     def mutateGenomeNode(self, genome:Genome):
         # add hidden node in EXISTING connection
@@ -321,7 +426,6 @@ class Neat:
         # originally 1->4, and we want to put the node 5 in middle
         # now 1->5->4. the original connection 1->4 have to be removed
         genome.removeConnection(con)
-
         # the middle is a brand new or existing in general storage mapping
         genome.insertGene(middle)
 
@@ -340,7 +444,7 @@ class Neat:
 
             i -= 1
 
-    def genSpecies(self)->None:
+    def speciate(self)->None:
         # reset all except representative
         for i in range(len(self.species.data)):
             s:Specie = self.species.data[i]
@@ -370,11 +474,11 @@ class Neat:
             s:Specie = self.species.data[i]
             s.evaluateScore()
     
-    def kill(self)->None:
+    def reducePopulation(self)->None:
         # kill X% of population
         for i in range(len(self.species.data)):
             s:Specie = self.species.data[i]
-            s.kill(1-self.SURVIVORS)
+            s.reducePopulation(1-self.config.SURVIVORS)
 
 
 

@@ -5,6 +5,40 @@ import random
 from models.evolution.Genome import Genome
 from tqdm import tqdm
 
+
+
+class Button:
+    """Create a button, then blit the surface in the while loop"""
+ 
+    def __init__(self, text,  pos, font, bg="black", feedback=""):
+        self.x, self.y = pos
+        self.font = pygame.font.SysFont("Arial", font)
+        if feedback == "":
+            self.feedback = "text"
+        else:
+            self.feedback = feedback
+        self.change_text(text, bg)
+ 
+    def change_text(self, text, bg="black"):
+        """Change the text whe you click"""
+        self.text = self.font.render(text, 1, pygame.Color("White"))
+        self.size = self.text.get_size()
+        self.surface = pygame.Surface(self.size)
+        self.surface.fill(bg)
+        self.surface.blit(self.text, (0, 0))
+        self.rect = pygame.Rect(self.x, self.y, self.size[0], self.size[1])
+ 
+    def show(self):
+        screen.blit(self.surface, (self.x, self.y))
+ 
+    def click(self, event, callback):
+        x, y = pygame.mouse.get_pos()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if pygame.mouse.get_pressed()[0]:
+                if self.rect.collidepoint(x, y):
+                    callback()
+
+
 WHITE =     (255, 255, 255)
 BLUE =      (  0,   0, 255)
 GREEN =     (  0, 255,   0)
@@ -25,32 +59,59 @@ running = True
 
 pygame.init()
 screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("TUFF")
+pygame.display.set_caption("NEAT")
 screen.fill(BACKGROUND_COLOR)
+button1 = Button(
+    "[0,0]",
+    (100, 100),
+    font=30,
+    bg="navy",
+    feedback="You clicked me")
+button2 = Button(
+    "[0,1]",
+    (200, 100),
+    font=30,
+    bg="navy",
+    feedback="You clicked me")
+button3 = Button(
+    "[1,0]",
+    (300, 100),
+    font=30,
+    bg="navy",
+    feedback="You clicked me")
+button4 = Button(
+    "[1,1]",
+    (400, 100),
+    font=30,
+    bg="navy",
+    feedback="You clicked me")
+
 pygame.display.update()
 
 font = pygame.font.Font(None, 24)
 font_neuron_output =  pygame.font.Font(None, 20)
 
 
-######
-epochs = 100
-global input_size, output_size
-input_size = 2 # + 1 bias?
 
-max_population = 200
+
+######
+epochs = 60
+global input_size, output_size
+input_size = 2 + 1 # + 1 bias
+
+max_population = 1000
 output_size = 1
 
 neat:Neat = Neat(input_size,output_size,max_population)
 
-neat.WEIGHT_SHIFT_STRENGTH = 1
-neat.WEIGHT_RANDOM_STRENGTH = 3 # for normal initialization
+neat.WEIGHT_SHIFT_STRENGTH = 0.5
+neat.WEIGHT_RANDOM_STRENGTH = 0.2 # for normal initialization
 
-neat.PROBABILITY_MUTATE_LINK = 0.1
+neat.PROBABILITY_MUTATE_LINK = 0.15
 neat.PROBABILITY_MUTATE_NODE = 0.1
-neat.PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.3
+neat.PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.1
 neat.PROBABILITY_MUTATE_WEIGHT_RANDOM = 0.01
-neat.PROBABILITY_MUTATE_TOGGLE_LINK = 0.001
+neat.PROBABILITY_MUTATE_TOGGLE_LINK = 0.01
 
 def score(genome:Genome)->float:
     # fitness function: XOR
@@ -61,11 +122,11 @@ def score(genome:Genome)->float:
     for i in range(2):
         for j in range(2):
 
-            inp:list = [i,j]
+            inp:list = [1,i,j]
 
             output:list = genome.forward(inp)
 
-            if inp[0] == inp[1]:
+            if inp[1] == inp[2]:
                 # 0 XOR 0 = 0, 1 XOR 1 = 0
                 fitness += (1 - output[0])
             else:
@@ -82,20 +143,26 @@ for i in tqdm(range(epochs)):
         genome.score = score(genome)
     
     neat.evolve()
-    if (i+1)%10 == 0:
+    if (i+1)%30 == 0:
         neat.printSpecies()
 
 best_genome = neat.getBestGenomeInSpecies()
     
 print(f"BEST SCORE {best_genome.score}")
-print(round(best_genome.forward([0,0])[0],2))
-print(round(best_genome.forward([0,1])[0],2))
-print(round(best_genome.forward([1,0])[0],2))
-print(round(best_genome.forward([1,1])[0],2))
+print(round(best_genome.forward([1,0,0])[0],2))
+print(round(best_genome.forward([1,0,1])[0],2))
+print(round(best_genome.forward([1,1,0])[0],2))
+print(round(best_genome.forward([1,1,1])[0],2))
 
 genome = best_genome
-print("HIDDEN CHECK 1", genome.hidden_neurons)
-print("HIDDEN CHECK 2", len(genome.hidden_connections))
+print("HIDDEN CHECK I", genome.hidden_neurons)
+
+connections_expected = best_genome.getConnectionsFromHiddenAndOutput()
+print("HIDDEN CHECK II", len(connections_expected))
+print("HIDDEN CHECK III", len(best_genome.connections))
+
+
+
 #####
 
 def clean():
@@ -145,7 +212,7 @@ def drawConnections(connections:list):
 def drawGenome(genome:Genome):
     clean()
 
-    genome.forward([0,1])
+    
 
     for neuron in genome.input_neurons:
         drawNeuron(neuron,color=BLUE)
@@ -165,12 +232,41 @@ def drawGenome(genome:Genome):
 
 ######
 
+
+def callbackForward1():
+    genome.forward([1,0,0])
+    drawGenome(genome)
+
+def callbackForward2():
+    genome.forward([1,0,1])
+    drawGenome(genome)
+
+def callbackForward3():
+    genome.forward([1,1,0])
+    drawGenome(genome)
+
+def callbackForward4():
+    genome.forward([1,1,1])
+    drawGenome(genome)
+
 drawGenome(genome)
 
 while running:
     ev = pygame.event.get()
 
+    button1.show()
+    button2.show()
+    button3.show()
+    button4.show()
+    pygame.display.update()
+
     for event in ev:
+        button1.click(event, callbackForward1)
+        button2.click(event, callbackForward2)
+        button3.click(event, callbackForward3)
+        button4.click(event, callbackForward4)
+        
+
         if event.type == pygame.KEYDOWN:
 
             if event.key == pygame.K_r:

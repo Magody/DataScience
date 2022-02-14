@@ -1,4 +1,6 @@
 import random
+
+from sympy import re
 from ..data_structures.RandomHashSet import RandomHashSet
 from ..network.Neuron import *
 
@@ -24,8 +26,6 @@ class Genome:
         self.hidden_neurons:list = hidden_neurons # type: Neuron
         self.output_neurons:list = output_neurons # type: Neuron
 
-        self.connections_hash:dict = dict()
-
         # Input just for hashing. type: hashmap<to_neuron.innovation_number:int,list[Connection]> 
         self.input_connections:dict = {neuron.innovation_number:[] for neuron in self.input_neurons}
         # type: hashmap<to_neuron.innovation_number:int,list[Connection]> 
@@ -43,7 +43,27 @@ class Genome:
 
     def existGene(self, innovation_number:int):
 
-        return innovation_number in self.input_connections or innovation_number in self.hidden_connections or innovation_number in self.output_connections
+        # todo: improve brute force
+        for neuron in self.input_neurons:
+            if neuron.innovation_number == innovation_number:
+                return True
+        for neuron in self.hidden_neurons:
+            if neuron.innovation_number == innovation_number:
+                return True
+        for neuron in self.output_neurons:
+            if neuron.innovation_number == innovation_number:
+                return True
+
+        return False
+
+    def existConnection(self, innovation_number:int):
+
+        # todo: improve brute force
+        for con in self.connections:
+            if con.innovation_number == innovation_number:
+                return True
+
+        return False
         
 
     
@@ -53,19 +73,14 @@ class Genome:
         self.hidden_neurons.sort(key=lambda neuron: neuron.x) # , reverse=True
         # self.connections.sort(key=lambda con: con.innovation_number)
 
+    
+
     def insertGene(self,gene:Neuron)->None:
-        
         neuron_type:int = gene.getNeuronType()
 
-        if gene.innovation_number in self.input_connections:
-            # sanity control
+        if self.existGene(gene.innovation_number):
             return
-        if gene.innovation_number in self.output_connections:
-            # sanity control
-            return
-        if gene.innovation_number in self.hidden_connections:
-            # sanity control
-            return
+        
 
         self.neurons.append(gene)
 
@@ -78,20 +93,15 @@ class Genome:
         else:
             raise Exception(f"Not supported connection type: {gene.x}")
 
+        
+
 
     def insertConnection(self,connection:Connection)->None:
        
         connection_type:int = Connection.getConnectionType(connection)
 
 
-        # todo: all this function can be improved ordering in insertion
-
-        if self.connections_hash.get(connection.innovation_number,False):
-            # if exists or is not set to False, return
-            raise Exception("Connection already inserted")
-
-        self.connections_hash[connection.innovation_number] = True
-
+        
         len_connections = len(self.connections)
         if len_connections == 0:
             self.connections.append(connection)
@@ -128,23 +138,58 @@ class Genome:
        
         connection_type:int = Connection.getConnectionType(connection)
 
+        connections_expected = self.getConnectionsFromHiddenAndOutput()
+        connections_expected.sort(key=lambda con: con.innovation_number)
+        self.connections.sort(key=lambda con: con.innovation_number)
 
-
-
-        self.connections_hash[connection.innovation_number] = False
 
         if connection_type == EnumConnectionTypes.TYPE_HIDDEN:
-            self.hidden_connections[connection.to_neuron.innovation_number].remove(connection)
+            index = -1
+            for i in range(len(self.hidden_connections[connection.to_neuron.innovation_number])):
+                con:Connection = self.hidden_connections[connection.to_neuron.innovation_number][i]
+                if connection.innovation_number == con.innovation_number:
+                    index = i
+                    break
+            self.hidden_connections[connection.to_neuron.innovation_number].pop(index)
         elif connection_type == EnumConnectionTypes.TYPE_OUTPUT:
-            self.output_connections[connection.to_neuron.innovation_number].remove(connection)
+            index = -1
+            for i in range(len(self.output_connections[connection.to_neuron.innovation_number])):
+                con:Connection = self.output_connections[connection.to_neuron.innovation_number][i]
+                if connection.innovation_number == con.innovation_number:
+                    index = i
+                    break
+            self.output_connections[connection.to_neuron.innovation_number].pop(index)
         else:
             raise Exception(f"Not supported connection type: {connection.to_neuron.x}")
 
+        index = -1
+        for i in range(len(self.connections)):
+            con:Connection = self.connections[i]
+            if connection.innovation_number == con.innovation_number:
+                index = i
+                break
+        self.connections.pop(index)
+
+        connections_expected = self.getConnectionsFromHiddenAndOutput()
+        connections_expected.sort(key=lambda con: con.innovation_number)
+        self.connections.sort(key=lambda con: con.innovation_number)
+
         
-        self.connections.remove(connection)
 
 
+    def countConnections(self):
+        cons1 = [cons_b for cons_a in self.hidden_connections.values() for cons_b in cons_a]
+        cons2 = [cons_b for cons_a in self.output_connections.values() for cons_b in cons_a]
+        
+        return [len(cons1), len(cons2)]
 
+    
+    def getConnectionsFromHiddenAndOutput(self):
+    
+        cons1 = [cons_b for cons_a in self.hidden_connections.values() for cons_b in cons_a]
+        cons2 = [cons_b for cons_a in self.output_connections.values() for cons_b in cons_a]
+        cons1.extend(cons2)       
+        return cons1
 
 
     def getRandomGene(self):
@@ -244,16 +289,12 @@ class Genome:
                 if c.enabled:
                     output_neuron_output += c.weight * c.from_neuron.output # todo: check bias
             
+            # print("output:",input, output_neuron_output)
             output_neuron.output = output_neuron.activationFunction(output_neuron_output)
-            Genome.TEST_SCORE += abs(output_neuron_output)
-            Genome.TEST_SCORE_COUNT += 1
             output[i] = output_neuron.output
 
         return output
 
-
-    TEST_SCORE = 0
-    TEST_SCORE_COUNT = 0
     """
     calculated the distance between this genome g1 and a second genome g2
         - g1 must have the highest innovation number!
@@ -369,13 +410,9 @@ class Genome:
 
 
 
-            
-
-
-
             if in1 == in2:
                 # similar gene
-                if random.random() > 0.5:
+                if random.random() < 0.5:
                     genome.insertConnection(connection1)
                 else:
                     genome.insertConnection(connection2)
@@ -406,12 +443,6 @@ class Genome:
             c:Connection = genome.connections[i]
             genome.insertGene(c.from_neuron)
             genome.insertGene(c.to_neuron)
-
-        #cons1 = [cons_b for cons_a in genome.hidden_connections.values() for cons_b in cons_a]
-        #cons2 = [cons_b for cons_a in genome.output_connections.values() for cons_b in cons_a]
-        #if len(cons1) + len(cons2) != len(genome.connections):
-        #    print()
-
 
         return genome
         

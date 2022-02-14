@@ -63,7 +63,7 @@ class Specie:
             genome:Genome = self.genomes.data[i]
             genome.id_specie = -1
 
-    def kill(self,percentage:float)->None:
+    def reducePopulation(self,percentage:float)->None:
         # ascending
 
         self.genomes.data.sort(key=lambda genome: genome.score)
@@ -74,6 +74,7 @@ class Specie:
         i:int = 0
         while i < amount:
             self.genomes.get(0).id_specie = -1
+            self.genomes.get(0).score = 0
             self.genomes.removeByIndex(0)
             i += 1
 
