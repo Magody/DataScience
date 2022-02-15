@@ -1,5 +1,3 @@
-import math
-import random
 from .Gene import Gene
 
 class EnumConnectionTypes:
@@ -9,6 +7,9 @@ class EnumConnectionTypes:
     TYPE_OUTPUT = 2
 
 class Neuron(Gene):
+    # GLOBAL/STATIC VARIABLES
+    map_neuron_innovation_number:dict = dict() # type <innovation_number:int, sample_x_y:int[2]>. Example: m[2] = (0.1,0.212121)
+    
 
     # type_neuron/x: 0.1->input node, 0.9->output node, other->hidden node
     # if we want to plot the position of this neuron this will be in (x,y)
@@ -63,53 +64,35 @@ class Neuron(Gene):
     def hashCode(self):
         return self.innovation_number
 
-class Connection(Gene):
-    # Internal innovation numbers for reference
-
-    neuronFrom:Neuron = None
-    neuronTo:Neuron = None
-    weight:float = 0
-    enabled:bool = True
-
-    replace_index:int = 0
-
-    def __init__(self,from_neuron:Neuron,to_neuron:Neuron):
-        self.neuronFrom = from_neuron
-        self.neuronTo = to_neuron
-        self.weight:float = Connection.getRandomWeight(0.5)
-        self.enabled:bool = True
-        self.replace_index:int = 0
-
-    def getConnectionType(self):
-        return self.neuronTo.getNeuronType()
+    @staticmethod
+    def getNeuronNew(x:float,y:float,innovation_number:int,activation_function,exist:bool=False):
+        n:Neuron = Neuron(x,y,innovation_number,activation_function)
+        if not exist:
+            # no exist, so add it to storage
+            Neuron.map_neuron_innovation_number[innovation_number] = (n.x,n.y,n.activationFunction)
+        return n
 
     @staticmethod
-    def copy(connection,from_neuron_new:Neuron,to_neuron_new:Neuron):
-        # todo: optimize?
-        """
-        We have to pass containers by reference for neurons!!
-        Creates a connection from new neurons replicated from innovation numbers in connection
-        """
-        connection_copy:Connection = Connection(from_neuron_new, to_neuron_new)
-        connection_copy.weight = connection.weight
-        connection_copy.enabled = connection.enabled
-        connection_copy.replace_index = connection.replace_index # todo: check replace index
-        connection_copy.innovation_number = connection.innovation_number
+    def getNeuron(innovation_number_expected:int):
+        # singleton for x and y for unique innovation_number        
 
-        return connection_copy
+        len_neurons_created:int = len(Neuron.map_neuron_innovation_number)
 
-    def equals(self, object):
-        if not type(object) is Connection:
-            return False
-        return self.neuronFrom.innovation_number == object.neuronFrom.innovation_number and self.neuronTo.innovation_number == object.neuronTo.innovation_number
+        exist:bool = False
 
-    def __str__(self):
-        return f"||{self.innovation_number}:{self.enabled}|{self.neuronFrom}=>{self.weight}=>{self.neuronTo}||"
+        innovation_number:int = len_neurons_created + 1
+        if innovation_number_expected <= len_neurons_created:
+            # in the history this gene was already created
+            innovation_number = innovation_number_expected
+            sample = Neuron.map_neuron_innovation_number[innovation_number]
+            x = sample[0]
+            y = sample[1]
+            activation_function = sample[2]
+            exist = True
 
-    def hashCode(self)->int:
-        MAX_NODES = math.pow(2,20)
-        return int(self.neuronFrom.innovation_number * MAX_NODES + self.neuronTo.innovation_number)
+            return Neuron.getNeuronNew(x,y,innovation_number,activation_function,True)
 
-    @staticmethod
-    def getRandomWeight(multiplier_range=1):
-        return (random.random() * 2 - 1) * multiplier_range
+        else:
+            raise Exception("Unknown neuron: Use getNeuronNew instead")
+
+        

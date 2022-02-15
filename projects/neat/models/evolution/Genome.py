@@ -1,11 +1,8 @@
 import random
 
-from ..data_structures.RandomHashSet import RandomHashSet
 from ..network.Neuron import *
+from ..network.Connection import *
 from ..network.Network import *
-
-
-
 
 class Genome(Network):
 
@@ -21,15 +18,15 @@ class Genome(Network):
         input_neurons:list,
         hidden_neurons:list,
         output_neurons:list,
-        probability_mutate_connections_weight:float = 0.8,
-        probability_perturb:float = 0.9,
-        probability_mutate_link:float = 0.06, # larger population may need 0.3+ because a larger population can tolerate a larger number of prospective species and greater topological diversity.
-        probability_mutate_node:float = 0.05,
-        probability_mutate_enable:float = 0.2,
-        probability_mutate_disable:float = 0.1,
+        probability_mutate_connections_weight:float = 0.8, # ->0.8
+        probability_perturb:float = 0.9, # ->0.9
+        probability_mutate_link:float = 0.05, # ->0.06 larger population may need 0.3+ because a larger population can tolerate a larger number of prospective species and greater topological diversity.
+        probability_mutate_node:float = 0.03, # ->0.05
+        probability_mutate_enable:float = 0.2, # ->0.2
+        probability_mutate_disable:float = 0.1, # ->0.1
         # depending on these, everything will work or not
-        weight_step:float = 0.01, 
-        MAX_HIDDEN_NEURONS:int = 10      
+        weight_step:float = 0.01, # ->0.01
+        MAX_HIDDEN_NEURONS:int = 10
     ):
         super().__init__(input_neurons,hidden_neurons,output_neurons)
         self.MAX_HIDDEN_NEURONS:int = MAX_HIDDEN_NEURONS
@@ -49,6 +46,29 @@ class Genome(Network):
         self.mutation_rates["step"] = weight_step
 
         self.probability_perturb = probability_perturb
+
+    @staticmethod
+    def empty_genome(input_size:int, output_size:int, prefill:bool=True, connect_input_output:bool=True):
+
+        input_neurons:list = []
+        output_neurons:list = []
+
+        if prefill:
+
+            for innovation_number in range(1, input_size+1):
+                input_neurons.append(Neuron.getNeuron(innovation_number))
+
+            for innovation_number in range(input_size+1,input_size+output_size+1):
+                output_neurons.append(Neuron.getNeuron(innovation_number))
+
+        genome = Genome(input_neurons,[],output_neurons)
+        if connect_input_output:
+            # initial connection
+            for input_neuron in genome.input_neurons:
+                for output_neuron in genome.output_neurons:
+                    genome.insertConnection(Connection.getConnection(input_neuron,output_neuron))
+
+        return genome
 
     @staticmethod
     def copy(genome, copy_specie=True):
@@ -90,19 +110,147 @@ class Genome(Network):
     def evaluateInput(self,input:list)->list:
         return self.forward(input)
 
+    def mutate(self)->None:
+        # alter the rate for every mutation 
+        for mutation,rate in self.mutation_rates.items():
+            if random.random() < 0.5:
+                self.mutation_rates[mutation] = 0.99 * rate
+            else:
+                self.mutation_rates[mutation] = 1.01 * rate
+            
+
+        # mutate weights
+        p1:float = random.random()
+        if p1 < self.mutation_rates["connection_weight"]:
+            # if mutate, exist a probability of become weights random or just do a step
+            self.mutateConnectionWeights()
+
+        # mutate link
+        p2:float = random.random()
+        if p2 < self.mutation_rates["link"]:
+            self.mutateGenomeLink()
+
+        if len(self.hidden_neurons) < self.MAX_HIDDEN_NEURONS:
+            p3:float = random.random()
+            if p3 < self.mutation_rates["node"]:
+                self.mutateGenomeNode()
+
+        p4:float = random.random()
+        if p4 < self.mutation_rates["enable"]:
+            self.mutateRandomLinkToggle(toggle_to_enabled=True)
+
+        p5:float = random.random()
+        if p5 < self.mutation_rates["disable"]:
+            self.mutateRandomLinkToggle(toggle_to_enabled=False)
+
+
+    def mutateGenomeLink(self)->bool:
+        # todo: improve search selection. important!
+        added:bool = False
+        for _ in range(100):
+            a, b = self.getRandomGenePair()
+
+            con:Connection = None
+            if a.x < b.x:
+                con = Connection(a,b)
+            else:
+                con = Connection(b,a)
+
+
+            con = Connection.getConnection(con.neuronFrom, con.neuronTo)
+
+            if self.existConnection(con.innovation_number):
+                # if exists or is not set to False, return
+                continue
+
+            con.weight = Connection.getRandomWeight(multiplier_range=0.5)
+
+            
+            self.insertConnection(con)
+            added = True
+            break
+        return added
+
+    def mutateGenomeNode(self):
+        # add hidden node in EXISTING connection
+        con:Connection = self.getRandomConnection()
+        
+        if con is None:
+            # there is no connections yet
+            return
+        
+
+        from_neuron:Neuron = con.neuronFrom
+        to_neuron:Neuron = con.neuronTo
+
+        # always split the link into two nodes
+        replace_index, key = Connection.getReplaceIndex(from_neuron,to_neuron)
+
+        middle:Neuron = None
+
+        create_new_node:bool = True
+
+        if replace_index > 0:
+            # already exist a node in the connection
+            if not self.existNeuronInnovationNumber(replace_index):
+                # If already exist a neuron in general, but not in genome, create a copy
+                middle = Neuron.getNeuron(replace_index)
+                create_new_node = False
+        
+        if create_new_node:
+            # if no previous neuron was created between this connection
+            x = (from_neuron.x + to_neuron.x)/2
+            y = (from_neuron.y + to_neuron.y)/2 + (random.random() * 0.1 - 0.05)
+            innovation_number:int = len(Neuron.map_neuron_innovation_number)+1
+            middle:Neuron = Neuron.getNeuronNew(x,y,innovation_number,self.activationFunctionHidden)
+            Connection.setReplaceIndex(from_neuron,to_neuron,middle.innovation_number)
+        
+
+        con1:Connection = Connection.getConnection(from_neuron,middle)
+        con2:Connection = Connection.getConnection(middle,to_neuron)
+
+        # before link: set weight to 1
+        con1.weight = 1
+        # next link: restore the properties of original long connection
+        con2.weight = con.weight
+        con2.enabled = con.enabled
+
+        # if input [1,2,3] and output [4]
+        # adding hidden node is hidden [5]
+        # originally 1->4, and we want to put the node 5 in middle
+        # now 1->5->4. the original connection 1->4 have to be removed
+        # genome.removeConnection(con) If we remove, then in a mutation will create it again... a loop forever
+        con.enabled = False
+        # the middle is a brand new or existing in general storage mapping
+        self.insertNeuron(middle)
+
+        # now we add the segmented connection
+        self.insertConnection(con1)
+        self.insertConnection(con2)
+
+
     def mutateConnectionWeights(self):
         # The system is tolerant to frequent mutations (source:paper)
         # todo: check if changes is for all connections or random
-        # for connection in self.connections:
+        for connection in self.connections:
 
-        connection:Connection = self.getRandomConnection()
+            # connection:Connection = self.getRandomConnection()
 
-        if connection:
-            # just change one at a time
-            if random.random() < self.probability_perturb:
-                connection.weight = connection.weight + Connection.getRandomWeight(multiplier_range=1) * self.mutation_rates["step"] # todo:check value
-            else:
-                connection.weight = Connection.getRandomWeight(multiplier_range=0.5)
+            if connection:
+                # just change one at a time
+                if random.random() < self.probability_perturb:
+                    random_weight:float = Connection.getRandomWeight(multiplier_range=1)
+                    connection.weight = connection.weight + (random_weight * self.mutation_rates["step"]) # todo:check value
+                else:
+                    connection.weight = Connection.getRandomWeight(multiplier_range=1)
+
+                """
+                CLAMP WEIGHTS:
+                if connection.weight > 1:
+                    connection.weight = 1
+                elif connection.weight < -1:
+                    connection.weight = -1
+                """
 
 
     def mutateRandomLinkToggle(self, toggle_to_enabled):

@@ -14,7 +14,7 @@ def run_experiment(seed,verbose_level=0):
     global input_size, output_size
     input_size = 2 + 1 # + 1 bias
 
-    max_population = 1000 # 150 in paper
+    max_population = 300 # 150 in paper
     output_size = 1
 
     neat:Neat = Neat(
@@ -75,7 +75,9 @@ def run_experiment(seed,verbose_level=0):
                     fitness += (1 - output[0])
 
         # maximum can get: 4
-        return fitness * fitness # square for sparse more the fitness and do better selections
+        final_fitness = fitness * fitness
+        final_fitness_with_penalization = final_fitness
+        return final_fitness_with_penalization # square for sparse more the fitness and do better selections
 
 
     def scoreXOR(genome:Genome)->float:
@@ -100,29 +102,30 @@ def run_experiment(seed,verbose_level=0):
                     # Expected: 1
                     fitness += output[0]
 
+
         # maximum can get: 4
         return fitness * fitness # square for sparse more the fitness and do better selections
 
 
     print("EVOLVING PHASE")
+    debug_step = epochs//10 # epochs//10 
     for i in tqdm(range(epochs)):
         # we can collect scores by frame, in this case we can directly collect from functions
-        for j in range(len(neat.genomes.data)):
-            genome:Genome = neat.genomes.data[j]
+        for j in range(len(neat.genomes)):
+            genome:Genome = neat.genomes[j]
             genome.score = scoreXOR(genome)
         
-        neat.evolve()
-        if ((i+1) % (epochs//5)) == 0 and verbose_level > 0:
-            neat.printSpecies()
+        neat.evolve(verbose_level=verbose_level-1,debug_step=debug_step)
+            
 
-    best_genome = neat.getBestGenomeInSpecies()
+    best_genome = neat.getBestGenome()
 
     operator = "&"
     
     
     if verbose_level > 0:
         print(f"BEST SCORE {best_genome.score}")
-        print(best_genome)
+        print("CONNECTIONS: ", len(best_genome.connections))
         print(f"0 {operator} 0 =", round(best_genome.forward([1,0,0])[0],2))
         print(f"0 {operator} 1 =", round(best_genome.forward([1,0,1])[0],2))
         print(f"1 {operator} 0 =", round(best_genome.forward([1,1,0])[0],2))
@@ -131,11 +134,13 @@ def run_experiment(seed,verbose_level=0):
     global genome_draw
     genome_draw = best_genome
 
+    #for specie in neat.species.data:
+    #    print(f"Specie {specie.id} sample: {specie.representative}")
     return best_genome.score
 
 temp = -math.inf
 temp2 = -1
-for s in range(8,8+1):
+for s in range(10):
     print(f"s:{s}")
     ff = run_experiment(s,1)
     if ff > temp:

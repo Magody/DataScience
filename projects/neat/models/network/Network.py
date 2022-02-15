@@ -1,7 +1,8 @@
 import math
 import random
-
+from .Activation import *
 from .Neuron import *
+from .Connection import *
 
 class Network:
     input_neurons:list = []
@@ -14,6 +15,9 @@ class Network:
         hidden_neurons:list,
         output_neurons:list
     ):
+        self.activationFunctionHidden = ActivationFunction.relu
+        self.activationFunctionOutput = ActivationFunction.sigmoid
+
         self.input_neurons:list = input_neurons # type: Neuron
         self.hidden_neurons:list = hidden_neurons # type: Neuron
         self.output_neurons:list = output_neurons # type: Neuron

@@ -2,7 +2,9 @@
 from ..data_structures.RandomHashSet import RandomHashSet
 from ..evolution.Genome import Genome
 from ..network.Neuron import *
+from ..network.Connection import *
 import random
+import math
 
 # A specie contains one or more genomes
 class Specie:
@@ -13,22 +15,30 @@ class Specie:
     representative:Genome = None
     score:float = 0
 
-    THRESHOLD_FAIL:int = 5
+    THRESHOLD_FAIL:int = 10
+
+    topFitness:float = -math.inf
+    staleness:int = 0
 
 
     def __init__(
         self,
         representative:Genome,
         probability_crossover:float = 0.75, # paper: In each generation, 25% of offspring resulted from mutation without crossover. With 75% we mutate new crossover
-        C1=1, # Specie delta disjoint
-        C2=1, # Specie delta excess
-        C3=3, # 0.4 Specie delta weight # for DPNV, may be better idea to increase this to 3
-        specie_threshold=4  # Specie delta threshold
+        C1=1, #->1 Specie delta disjoint
+        C2=1, #->1 Specie delta excess
+        C3=0.4, #->3 0.4 Specie delta weight # for DPNV, may be better idea to increase this to 3
+        specie_threshold=3 #->4  # Specie delta threshold
         # when c1,c2,c3 relative higher than threshold -> more specie division
     ):
 
         Specie.STATIC_COUNTER += 1
         self.id = Specie.STATIC_COUNTER
+
+
+        self.topFitness:float = -math.inf
+        self.staleness:int = 0
+        
 
         self.best_score:float = -math.inf
         self.generations_from_last_improve:int = 0
@@ -119,10 +129,13 @@ class Specie:
 
         # factor N, the number of genes in the larger genome, normalizes for genome size
         N = max(g1_number_genes,g2_number_genes)
-        if N < 20:
+        """
+        # todo: check if in complex probles this is helpful
+
+        if N < 10:
             # paper recommendation
             N = 1
-
+        """
         factor_disjoint:float = ((self.C1 * disjoint)/N)
         factor_excess:float = ((self.C2 * excess)/N)
         factor_weight:float = (self.C3 * weight_diff)
@@ -152,11 +165,14 @@ class Specie:
             v += genome.score
         self.score = v/self.genomes.size()
 
+
     def increaseGeneration(self)->None:
         self.generations_alive += 1
-        if self.score > self.best_score:
+
+        score_rounded:float = round(self.score, 1)
+        if score_rounded > self.best_score:
             self.generations_from_last_improve = 0
-            self.best_score = self.score
+            self.best_score = score_rounded
             self.can_reproduce = True
         else:
             self.generations_from_last_improve += 1
@@ -180,37 +196,18 @@ class Specie:
         self.representative.id_specie = self.id
         self.score = 0
 
-
-    def goExtinct(self):
-
-        for i in range(len(self.genomes.data)):
-            genome:Genome = self.genomes.data[i]
-            genome.id_specie = -1
-
-    def reducePopulation(self,percentage:float)->None:
-        # ascending
-
-        self.genomes.data.sort(key=lambda genome: genome.score)
-
-        # kill clients with low score
-        amount:float = percentage * self.genomes.size()
-
-        i:int = 0
-        while i < amount:
-            self.genomes.get(0).id_specie = -1
-            self.genomes.get(0).score = 0
-            self.genomes.removeByIndex(0)
-            i += 1
-
     def size(self)->int:
         return self.genomes.size()
 
-    def breed(self, genome_container:Genome)->Genome:
+    def breed(self)->Genome:
         
         p:float = random.random()
         len_genomes:int = self.genomes.size()
 
         if p < self.probability_crossover:
+            input_size:int = len(self.representative.input_neurons)
+            output_size:int = len(self.representative.output_neurons)
+            genome_container:Genome = Genome.empty_genome(input_size,output_size,connect_input_output=False)
             # todo: we can control and improve if are the same?
             g1:Genome = self.genomes.get(random.randint(0,len_genomes-1))
             g2:Genome = self.genomes.get(random.randint(0,len_genomes-1))
