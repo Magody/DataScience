@@ -31,13 +31,10 @@ class Neuron(Gene):
 
     @staticmethod
     def copy(neuron):
-        # Neurons have to be passed by reference, are shared by connections
-        return neuron
-        """
         neuron_copy = Neuron(neuron.x,neuron.y,neuron.innovation_number,neuron.activationFunction)
         neuron_copy.output = neuron.output
         return neuron_copy
-        """
+        
     def getNeuronType(self)->int:
 
         x_destiny:float = self.x
@@ -61,31 +58,39 @@ class Neuron(Gene):
         return self.innovation_number == object.innovation_number
 
     def __str__(self):
-        return f"(Neuron: {self.innovation_number})"
+        return f"({self.innovation_number})"
 
     def hashCode(self):
         return self.innovation_number
 
 class Connection(Gene):
-    # This neurons are copyies and share same innovation number with others
-    from_neuron:Neuron = None
-    to_neuron:Neuron = None
+    # Internal innovation numbers for reference
+
+    neuronFrom:Neuron = None
+    neuronTo:Neuron = None
     weight:float = 0
     enabled:bool = True
 
     replace_index:int = 0
 
     def __init__(self,from_neuron:Neuron,to_neuron:Neuron):
-        self.from_neuron = from_neuron
-        self.to_neuron = to_neuron
+        self.neuronFrom = from_neuron
+        self.neuronTo = to_neuron
         self.weight:float = Connection.getRandomWeight(0.5)
         self.enabled:bool = True
         self.replace_index:int = 0
 
+    def getConnectionType(self):
+        return self.neuronTo.getNeuronType()
+
     @staticmethod
-    def copy(connection):
+    def copy(connection,from_neuron_new:Neuron,to_neuron_new:Neuron):
         # todo: optimize?
-        connection_copy:Connection = Connection(Neuron.copy(connection.from_neuron),Neuron.copy(connection.to_neuron))
+        """
+        We have to pass containers by reference for neurons!!
+        Creates a connection from new neurons replicated from innovation numbers in connection
+        """
+        connection_copy:Connection = Connection(from_neuron_new, to_neuron_new)
         connection_copy.weight = connection.weight
         connection_copy.enabled = connection.enabled
         connection_copy.replace_index = connection.replace_index # todo: check replace index
@@ -93,25 +98,17 @@ class Connection(Gene):
 
         return connection_copy
 
-
-
     def equals(self, object):
         if not type(object) is Connection:
             return False
-        
-        return self.from_neuron.equals(object.from_neuron) and self.to_neuron.equals(object.to_neuron)
+        return self.neuronFrom.innovation_number == object.neuronFrom.innovation_number and self.neuronTo.innovation_number == object.neuronTo.innovation_number
 
     def __str__(self):
-        return f"(Connection: from={self.from_neuron.innovation_number},to={self.to_neuron.innovation_number},weight={self.weight},enabled={self.enabled},innovation_number={self.innovation_number})"
+        return f"||{self.innovation_number}:{self.enabled}|{self.neuronFrom}=>{self.weight}=>{self.neuronTo}||"
 
     def hashCode(self)->int:
         MAX_NODES = math.pow(2,20)
-        return int(self.from_neuron.innovation_number * MAX_NODES + self.to_neuron.innovation_number)
-    
-    @staticmethod
-    def getConnectionType(connection)->int:
-         # interpret the place of connection
-        return connection.to_neuron.getNeuronType()
+        return int(self.neuronFrom.innovation_number * MAX_NODES + self.neuronTo.innovation_number)
 
     @staticmethod
     def getRandomWeight(multiplier_range=1):

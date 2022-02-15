@@ -22,8 +22,9 @@ class Specie:
         probability_crossover:float = 0.75, # paper: In each generation, 25% of offspring resulted from mutation without crossover. With 75% we mutate new crossover
         C1=1, # Specie delta disjoint
         C2=1, # Specie delta excess
-        C3=1, # 0.4 Specie delta weight # for DPNV, may be better idea to increase this to 3
+        C3=3, # 0.4 Specie delta weight # for DPNV, may be better idea to increase this to 3
         specie_threshold=4  # Specie delta threshold
+        # when c1,c2,c3 relative higher than threshold -> more specie division
     ):
 
         Specie.STATIC_COUNTER += 1
@@ -51,7 +52,7 @@ class Specie:
         self.score:float = 0
 
     def __str__(self)->str:
-        return f"Specie: {self.id}. Generations from last improve: {self.generations_from_last_improve}. Alive: {self.generations_alive} . Best.: {self.best_score}. Pop.: {self.genomes.size()}. Can: {self.can_reproduce}"
+        return f"Specie: {self.id}. TFromLast: {self.generations_from_last_improve}. Alive: {self.generations_alive} . Best.: {self.best_score}. Pop.: {self.genomes.size()}. Can: {self.can_reproduce}"
         
 
     """

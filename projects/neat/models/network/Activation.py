@@ -9,6 +9,11 @@ class ActivationFunction:
 
     
     @staticmethod
+    def relu(x:float):
+        # default activation is sigmoid
+        return x if x > 0 else 0
+
+    @staticmethod
     def sigmoid_bounded(x:float):
         # steepened sigmoid: allows more fine tuning at extreme activations. 
         # It's optimized to be close to linear during its steepest ascent between activations

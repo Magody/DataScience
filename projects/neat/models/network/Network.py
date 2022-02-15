@@ -1,6 +1,7 @@
 import math
 import random
-from.Neuron import *
+
+from .Neuron import *
 
 class Network:
     input_neurons:list = []
@@ -17,33 +18,59 @@ class Network:
         self.hidden_neurons:list = hidden_neurons # type: Neuron
         self.output_neurons:list = output_neurons # type: Neuron
 
-        # Input just for hashing. type: hashmap<to_neuron.innovation_number:int,list[Connection]> 
+        # Input just for hashing. type: hashmap<to_neuron:int,list[Connection]> 
         self.input_connections:dict = {neuron.innovation_number:[] for neuron in self.input_neurons}
-        # type: hashmap<to_neuron.innovation_number:int,list[Connection]> 
+        # type: hashmap<to_neuron:int,list[Connection]> 
         self.hidden_connections:dict = {neuron.innovation_number:[] for neuron in self.hidden_neurons}
-        # type: hashmap<to_neuron.innovation_number:int,list[Connection]> 
-        self.output_connections:dict = {neuron.innovation_number:[] for neuron in self.output_neurons} # type: hashmap<to_neuron.innovation_number:int,list[Connection]>
+        # type: hashmap<to_neuron:int,list[Connection]> 
+        self.output_connections:dict = {neuron.innovation_number:[] for neuron in self.output_neurons} # type: hashmap<to_neuron:int,list[Connection]>
 
         # redundancy, more RAM for faster proccessing
         self.connections:list = []
-        self.neurons:list = []
-        self.neurons.extend(input_neurons)
-        self.neurons.extend(hidden_neurons)
-        self.neurons.extend(output_neurons)
+        
+        self.neurons:dict = dict() # mapping <innovation_number:int,neuron:Neuron>
+        for neuron in input_neurons:
+            self.neurons[neuron.innovation_number] = neuron
+        for neuron in hidden_neurons:
+            self.neurons[neuron.innovation_number] = neuron
+        for neuron in output_neurons:
+            self.neurons[neuron.innovation_number] = neuron
 
 
-    def existNeuron(self, innovation_number:int):
+
+    def existNeuron(self, neuron:Neuron):
 
         # todo: improve brute force
-        for neuron in self.input_neurons:
-            if neuron.innovation_number == innovation_number:
-                return True
-        for neuron in self.hidden_neurons:
-            if neuron.innovation_number == innovation_number:
-                return True
-        for neuron in self.output_neurons:
-            if neuron.innovation_number == innovation_number:
-                return True
+        # check REFERENCE (memory allocation), or special id
+        if neuron in self.neurons:
+            return True
+
+        return False
+
+    def getSingletonContainers(self, connection:Connection):
+        neuronFromContainer:Neuron = None
+        neuronToContainer:Neuron = None
+
+        if self.existNeuronInnovationNumber(connection.neuronFrom.innovation_number):
+            neuronFromContainer = self.neurons[connection.neuronFrom.innovation_number]
+        else:
+            neuronFromContainer = Neuron.copy(connection.neuronFrom)
+            self.insertNeuron(neuronFromContainer)
+
+        if self.existNeuronInnovationNumber(connection.neuronTo.innovation_number):
+            neuronToContainer = self.neurons[connection.neuronTo.innovation_number]
+        else:
+            neuronToContainer = Neuron.copy(connection.neuronTo)
+            self.insertNeuron(neuronToContainer)
+
+        return neuronFromContainer, neuronToContainer
+
+    def existNeuronInnovationNumber(self, innovation_number:int):
+
+        # todo: improve brute force
+        # check REFERENCE (memory allocation), or special id
+        if innovation_number in self.neurons:
+            return True
 
         return False
 
@@ -69,11 +96,11 @@ class Network:
     def insertNeuron(self,gene:Neuron)->None:
         neuron_type:int = gene.getNeuronType()
 
-        if self.existNeuron(gene.innovation_number):
+        if self.existNeuron(gene):
             return
         
-
-        self.neurons.append(gene)
+        
+        self.neurons[gene.innovation_number] = gene
 
         if neuron_type == EnumConnectionTypes.TYPE_INPUT:
             self.input_neurons.append(gene)
@@ -89,7 +116,7 @@ class Network:
 
     def insertConnection(self,connection:Connection)->None:
        
-        connection_type:int = Connection.getConnectionType(connection)
+        connection_type:int = connection.getConnectionType()
 
 
         
@@ -108,18 +135,18 @@ class Network:
                 self.connections.append(connection)
 
         if connection_type == EnumConnectionTypes.TYPE_HIDDEN:
-            if not connection.to_neuron.innovation_number in self.hidden_connections:
-                self.hidden_connections[connection.to_neuron.innovation_number] = []   
-            self.hidden_connections[connection.to_neuron.innovation_number].append(connection)
+            if not connection.neuronTo.innovation_number in self.hidden_connections:
+                self.hidden_connections[connection.neuronTo.innovation_number] = []   
+            self.hidden_connections[connection.neuronTo.innovation_number].append(connection)
             
         elif connection_type == EnumConnectionTypes.TYPE_OUTPUT:
-            if not connection.to_neuron.innovation_number in self.output_connections:
-                self.output_connections[connection.to_neuron.innovation_number] = []   
+            if not connection.neuronTo.innovation_number in self.output_connections:
+                self.output_connections[connection.neuronTo.innovation_number] = []   
 
-            self.output_connections[connection.to_neuron.innovation_number].append(connection)
+            self.output_connections[connection.neuronTo.innovation_number].append(connection)
             
         else:
-            raise Exception(f"Not supported connection type: {connection.to_neuron.x}")
+            raise Exception(f"Not supported connection type: {connection.neuronTo} {connection_type}")
 
         
 
@@ -127,31 +154,27 @@ class Network:
 
     def removeConnection(self,connection:Connection)->None:
        
-        connection_type:int = Connection.getConnectionType(connection)
+        connection_type:int = connection.getConnectionType()
 
-        connections_expected = self.getConnectionsFromHiddenAndOutput()
-        connections_expected.sort(key=lambda con: con.innovation_number)
-        self.connections.sort(key=lambda con: con.innovation_number)
-
-
+        # todo: improve using memory object directly
         if connection_type == EnumConnectionTypes.TYPE_HIDDEN:
             index = -1
-            for i in range(len(self.hidden_connections[connection.to_neuron.innovation_number])):
-                con:Connection = self.hidden_connections[connection.to_neuron.innovation_number][i]
+            for i in range(len(self.hidden_connections[connection.neuronTo.innovation_number])):
+                con:Connection = self.hidden_connections[connection.neuronTo.innovation_number][i]
                 if connection.innovation_number == con.innovation_number:
                     index = i
                     break
-            self.hidden_connections[connection.to_neuron.innovation_number].pop(index)
+            self.hidden_connections[connection.neuronTo.innovation_number].pop(index)
         elif connection_type == EnumConnectionTypes.TYPE_OUTPUT:
             index = -1
-            for i in range(len(self.output_connections[connection.to_neuron.innovation_number])):
-                con:Connection = self.output_connections[connection.to_neuron.innovation_number][i]
+            for i in range(len(self.output_connections[connection.neuronTo.innovation_number])):
+                con:Connection = self.output_connections[connection.neuronTo.innovation_number][i]
                 if connection.innovation_number == con.innovation_number:
                     index = i
                     break
-            self.output_connections[connection.to_neuron.innovation_number].pop(index)
+            self.output_connections[connection.neuronTo.innovation_number].pop(index)
         else:
-            raise Exception(f"Not supported connection type: {connection.to_neuron.x}")
+            raise Exception(f"Not supported connection type: {connection.neuronTo} {connection_type}")
 
         index = -1
         for i in range(len(self.connections)):
@@ -160,10 +183,6 @@ class Network:
                 index = i
                 break
         self.connections.pop(index)
-
-        connections_expected = self.getConnectionsFromHiddenAndOutput()
-        connections_expected.sort(key=lambda con: con.innovation_number)
-        self.connections.sort(key=lambda con: con.innovation_number)
 
         
 
@@ -185,12 +204,13 @@ class Network:
 
     def getRandomGene(self):
 
-        len_neurons:int = len(self.neurons)
+        innovation_numbers:list = list(self.neurons.keys())
+        len_neurons:int = len(innovation_numbers)
 
         if len_neurons == 0:
             return None
 
-        selected:int = random.randint(0,len_neurons-1)
+        selected:int = innovation_numbers[random.randint(0,len_neurons-1)]
         return self.neurons[selected]
 
     def getRandomGenePair(self):
@@ -261,7 +281,7 @@ class Network:
             for j in range(len(hidden_neuron_connections)):
                 c:Connection = hidden_neuron_connections[j]
                 if c.enabled:
-                    hidden_neuron_output += c.weight * c.from_neuron.output # todo: check bias
+                    hidden_neuron_output += c.weight * c.neuronFrom.output # todo: check bias
             
             hidden_neuron.output = hidden_neuron.activationFunction(hidden_neuron_output)
 
@@ -275,7 +295,7 @@ class Network:
             for j in range(len(output_neuron_connections)):
                 c:Connection = output_neuron_connections[j]
                 if c.enabled:
-                    output_neuron_output += c.weight * c.from_neuron.output # todo: check bias
+                    output_neuron_output += c.weight * c.neuronFrom.output # todo: check bias
             
             # print("output:",input, output_neuron_output)
             output_neuron.output = output_neuron.activationFunction(output_neuron_output)
