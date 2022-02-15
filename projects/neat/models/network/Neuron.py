@@ -1,4 +1,5 @@
 import math
+import random
 from .Gene import Gene
 
 class EnumConnectionTypes:
@@ -28,6 +29,15 @@ class Neuron(Gene):
 
         self.activationFunction = activationFunction
 
+    @staticmethod
+    def copy(neuron):
+        # Neurons have to be passed by reference, are shared by connections
+        return neuron
+        """
+        neuron_copy = Neuron(neuron.x,neuron.y,neuron.innovation_number,neuron.activationFunction)
+        neuron_copy.output = neuron.output
+        return neuron_copy
+        """
     def getNeuronType(self)->int:
 
         x_destiny:float = self.x
@@ -68,9 +78,21 @@ class Connection(Gene):
     def __init__(self,from_neuron:Neuron,to_neuron:Neuron):
         self.from_neuron = from_neuron
         self.to_neuron = to_neuron
-        self.weight:float = 0
+        self.weight:float = Connection.getRandomWeight(0.5)
         self.enabled:bool = True
         self.replace_index:int = 0
+
+    @staticmethod
+    def copy(connection):
+        # todo: optimize?
+        connection_copy:Connection = Connection(Neuron.copy(connection.from_neuron),Neuron.copy(connection.to_neuron))
+        connection_copy.weight = connection.weight
+        connection_copy.enabled = connection.enabled
+        connection_copy.replace_index = connection.replace_index # todo: check replace index
+        connection_copy.innovation_number = connection.innovation_number
+
+        return connection_copy
+
 
 
     def equals(self, object):
@@ -90,3 +112,7 @@ class Connection(Gene):
     def getConnectionType(connection)->int:
          # interpret the place of connection
         return connection.to_neuron.getNeuronType()
+
+    @staticmethod
+    def getRandomWeight(multiplier_range=1):
+        return (random.random() * 2 - 1) * multiplier_range

@@ -88,79 +88,79 @@ button4 = Button(
 
 pygame.display.update()
 
-font = pygame.font.Font(None, 24)
-font_neuron_output =  pygame.font.Font(None, 20)
+font = pygame.font.Font(None, 16)
+font_neuron_output =  pygame.font.Font(None, 30)
 
 
 
 
 ######
-epochs = 60
+epochs = 100 # 100 in paper
 global input_size, output_size
 input_size = 2 + 1 # + 1 bias
 
-max_population = 1000
+max_population = 100 # 150 in paper
 output_size = 1
 
-neat:Neat = Neat(input_size,output_size,max_population)
+neat:Neat = Neat(
+    input_size,output_size,max_population
+)
 
-neat.WEIGHT_SHIFT_STRENGTH = 0.5
-neat.WEIGHT_RANDOM_STRENGTH = 0.2 # for normal initialization
+global current_input
+current_input = [1,0,0]
 
-neat.PROBABILITY_MUTATE_LINK = 0.15
-neat.PROBABILITY_MUTATE_NODE = 0.1
-neat.PROBABILITY_MUTATE_WEIGHT_SHIFT = 0.1
-neat.PROBABILITY_MUTATE_WEIGHT_RANDOM = 0.01
-neat.PROBABILITY_MUTATE_TOGGLE_LINK = 0.01
-
-def score(genome:Genome)->float:
-    # fitness function: XOR
-    global input_size, output_size
-
-    fitness:float = 0
-
-    for i in range(2):
-        for j in range(2):
-
-            inp:list = [1,i,j]
-
-            output:list = genome.forward(inp)
-
-            if inp[1] == inp[2]:
-                # 0 XOR 0 = 0, 1 XOR 1 = 0
-                fitness += (1 - output[0])
-            else:
-                # 1 XOR 0 = 1, 0 XOR 1 = 1
-                fitness += (output[0] - 0)
-
-    return fitness/4
-
-
-print("EVOLVING PHASE")
-for i in tqdm(range(epochs)):
-    for j in range(len(neat.genomes.data)):
-        genome:Genome = neat.genomes.data[j]
-        genome.score = score(genome)
+def run_experiment():
     
-    neat.evolve()
-    if (i+1)%30 == 0:
-        neat.printSpecies()
 
-best_genome = neat.getBestGenomeInSpecies()
-    
-print(f"BEST SCORE {best_genome.score}")
-print(round(best_genome.forward([1,0,0])[0],2))
-print(round(best_genome.forward([1,0,1])[0],2))
-print(round(best_genome.forward([1,1,0])[0],2))
-print(round(best_genome.forward([1,1,1])[0],2))
+    def scoreAND(genome:Genome)->float:
+        # The resulting number was squared to give proportionally more fitness the closer a network was to a solution.
+                
+        # fitness function: XOR
+        global input_size, output_size
 
-genome = best_genome
-print("HIDDEN CHECK I", genome.hidden_neurons)
+        fitness:float = 0
 
-connections_expected = best_genome.getConnectionsFromHiddenAndOutput()
-print("HIDDEN CHECK II", len(connections_expected))
-print("HIDDEN CHECK III", len(best_genome.connections))
+        for i in range(2):
+            for j in range(2):
 
+                inp:list = [1,i,j]
+
+                output:list = genome.forward(inp)
+
+                if inp[1] == 1 and inp[2] == 1:
+                    # 1
+                    fitness += output[0]
+                else:
+                    # 0
+                    fitness += (1 - output[0])
+
+        # maximum can get: 4
+        return fitness * fitness # square for sparse more the fitness and do better selections
+
+
+    print("EVOLVING PHASE")
+    for i in tqdm(range(epochs)):
+        # we can collect scores by frame, in this case we can directly collect from functions
+        for j in range(len(neat.genomes.data)):
+            genome:Genome = neat.genomes.data[j]
+            genome.score = scoreAND(genome)
+        
+        neat.evolve()
+        if (i+1) % epochs//5 == 0:
+            neat.printSpecies()
+
+    best_genome = neat.getBestGenomeInSpecies()
+
+    operator = "&"
+    print(f"BEST SCORE {best_genome.score}")
+    print(best_genome)
+    print(f"0 {operator} 0 =", round(best_genome.forward([1,0,0])[0],2))
+    print(f"0 {operator} 1 =", round(best_genome.forward([1,0,1])[0],2))
+    print(f"1 {operator} 0 =", round(best_genome.forward([1,1,0])[0],2))
+    print(f"1 {operator} 1 =", round(best_genome.forward([1,1,1])[0],2))
+
+    global genome_draw
+    genome_draw = best_genome
 
 
 #####
@@ -179,7 +179,7 @@ def drawNeuron(neuron,offset=(0,0),color=BLUE):
     (x,y) = getXYPixel(neuron)
     x += offset[0]
     y += offset[1]
-    pygame.draw.circle(screen, color, (x,y), 10)
+    pygame.draw.circle(screen, color, (x,y), 12)
     x -= 5
     y -= 3
     screen.blit(font_neuron_output.render(f"{round(neuron.output,2)}", True, WHITE), (x,y))
@@ -212,13 +212,16 @@ def drawConnections(connections:list):
 def drawGenome(genome:Genome):
     clean()
 
+    global current_input
+    genome.forward(current_input)
+
     
 
     for neuron in genome.input_neurons:
         drawNeuron(neuron,color=BLUE)
 
     for neuron in genome.hidden_neurons:
-        drawNeuron(neuron,color=(40, 206, 247))
+        drawNeuron(neuron,color=(59, 94, 68))
 
     for i,neuron in enumerate(genome.output_neurons):
         drawNeuron(neuron,color=(125, 25, 60))
@@ -234,22 +237,30 @@ def drawGenome(genome:Genome):
 
 
 def callbackForward1():
-    genome.forward([1,0,0])
-    drawGenome(genome)
+    global current_input, genome_draw
+    current_input = [1,0,0]
+    drawGenome(genome_draw)
 
 def callbackForward2():
-    genome.forward([1,0,1])
-    drawGenome(genome)
+    global current_input, genome_draw
+    current_input = [1,0,1]
+    drawGenome(genome_draw)
 
 def callbackForward3():
-    genome.forward([1,1,0])
-    drawGenome(genome)
+    global current_input, genome_draw
+    current_input = [1,1,0]
+    drawGenome(genome_draw)
 
 def callbackForward4():
-    genome.forward([1,1,1])
-    drawGenome(genome)
+    global current_input, genome_draw
+    current_input = [1,1,1]
+    drawGenome(genome_draw)
 
-drawGenome(genome)
+#genome_draw = neat.empty_genome()
+
+run_experiment()
+global genome_draw
+drawGenome(genome_draw)
 
 while running:
     ev = pygame.event.get()
@@ -270,32 +281,28 @@ while running:
         if event.type == pygame.KEYDOWN:
 
             if event.key == pygame.K_r:
-                genome = neat.empty_genome()
+                genome_draw = neat.empty_genome()
                 clean()
-                drawGenome(genome)
+                drawGenome(genome_draw)
 
             if event.key == pygame.K_t:
-                drawGenome(genome)
+                drawGenome(genome_draw)
 
             if event.key == pygame.K_a:
-                neat.mutateGenomeNode(genome)
-                drawGenome(genome)
+                neat.mutateGenomeNode(genome_draw)
+                drawGenome(genome_draw)
             
             if event.key == pygame.K_s:
-                neat.mutateGenomeLink(genome)
-                drawGenome(genome)
+                neat.mutateGenomeLink(genome_draw)
+                drawGenome(genome_draw)
 
             if event.key == pygame.K_d:
-                genome.mutateLinkToggle()
-                drawGenome(genome)
+                genome_draw.mutateRandomLinkToggle()
+                drawGenome(genome_draw)
             
             if event.key == pygame.K_w:
-                genome.mutateWeightRandom(neat.WEIGHT_RANDOM_STRENGTH)
-                drawGenome(genome)
-            
-            if event.key == pygame.K_e:
-                genome.mutateWeightShift(neat.WEIGHT_SHIFT_STRENGTH)
-                drawGenome(genome)
+                genome_draw.mutateConnectionWeights()
+                drawGenome(genome_draw)
 
 
         if event.type == pygame.QUIT:
