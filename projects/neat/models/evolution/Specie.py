@@ -15,7 +15,7 @@ class Specie:
     representative:Genome = None
     score:float = 0
 
-    THRESHOLD_FAIL:int = 10
+    THRESHOLD_FAIL:int = 20
 
     topFitness:float = -math.inf
     staleness:int = 0
@@ -27,7 +27,7 @@ class Specie:
         probability_crossover:float = 0.75, # paper: In each generation, 25% of offspring resulted from mutation without crossover. With 75% we mutate new crossover
         C1=1, #->1 Specie delta disjoint
         C2=1, #->1 Specie delta excess
-        C3=0.4, #->3 0.4 Specie delta weight # for DPNV, may be better idea to increase this to 3
+        C3=3, #->3 0.4 Specie delta weight # for DPNV, may be better idea to increase this to 3
         specie_threshold=3 #->4  # Specie delta threshold
         # when c1,c2,c3 relative higher than threshold -> more specie division
     ):

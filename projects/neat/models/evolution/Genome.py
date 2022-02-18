@@ -20,13 +20,14 @@ class Genome(Network):
         output_neurons:list,
         probability_mutate_connections_weight:float = 0.8, # ->0.8
         probability_perturb:float = 0.9, # ->0.9
-        probability_mutate_link:float = 0.05, # ->0.06 larger population may need 0.3+ because a larger population can tolerate a larger number of prospective species and greater topological diversity.
-        probability_mutate_node:float = 0.03, # ->0.05
-        probability_mutate_enable:float = 0.2, # ->0.2
-        probability_mutate_disable:float = 0.1, # ->0.1
+        probability_mutate_link:float = 0.2, # ->0.06 larger population may need 0.3+ because a larger population can tolerate a larger number of prospective species and greater topological diversity.
+        probability_mutate_node:float = 0.1, # ->0.05
+        probability_mutate_enable:float = 0.1, # ->0.2
+        probability_mutate_disable:float = 0.05, # ->0.1
         # depending on these, everything will work or not
+        std_weight_initialization:float = 1,
         weight_step:float = 0.01, # ->0.01
-        MAX_HIDDEN_NEURONS:int = 10
+        MAX_HIDDEN_NEURONS:int = 3
     ):
         super().__init__(input_neurons,hidden_neurons,output_neurons)
         self.MAX_HIDDEN_NEURONS:int = MAX_HIDDEN_NEURONS
@@ -44,6 +45,7 @@ class Genome(Network):
         self.mutation_rates["enable"] = probability_mutate_enable
         self.mutation_rates["disable"] = probability_mutate_disable
         self.mutation_rates["step"] = weight_step
+        self.mutation_rates["std_weight_initialization"] = std_weight_initialization
 
         self.probability_perturb = probability_perturb
 
@@ -130,6 +132,7 @@ class Genome(Network):
         if p2 < self.mutation_rates["link"]:
             self.mutateGenomeLink()
 
+        # increment nodes if possible
         if len(self.hidden_neurons) < self.MAX_HIDDEN_NEURONS:
             p3:float = random.random()
             if p3 < self.mutation_rates["node"]:
@@ -242,7 +245,7 @@ class Genome(Network):
                     random_weight:float = Connection.getRandomWeight(multiplier_range=1)
                     connection.weight = connection.weight + (random_weight * self.mutation_rates["step"]) # todo:check value
                 else:
-                    connection.weight = Connection.getRandomWeight(multiplier_range=1)
+                    connection.weight = Connection.getRandomWeight(multiplier_range=self.mutation_rates["std_weight_initialization"])
 
                 """
                 CLAMP WEIGHTS:

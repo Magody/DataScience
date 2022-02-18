@@ -107,7 +107,7 @@ def run_experiment(seed,verbose_level=0):
     global input_size, output_size
     input_size = 2 + 1 # + 1 bias
 
-    max_population = 300 # 150 in paper
+    max_population = 400 # 150 in paper
     output_size = 1
 
     neat:Neat = Neat(
@@ -231,7 +231,7 @@ def run_experiment(seed,verbose_level=0):
     #    print(f"Specie {specie.id} sample: {specie.representative}")
     return best_genome.score
 
-run_experiment(1,1)
+run_experiment(seed=3,verbose_level=1)
 
 
 #####

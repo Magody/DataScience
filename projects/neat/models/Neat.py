@@ -17,7 +17,8 @@ class Neat:
 
         self.genomes = []
         self.species = RandomHashSet()
-        self.STAGNATED_MAXIMUM = 15
+        # The stagnation number varies with probability of genomes and total number of epochs
+        self.STAGNATED_MAXIMUM = 50 # todo: remove the stagnat variable in Specie class
 
         self.reset(input_size, output_size, population)
 
@@ -66,10 +67,9 @@ class Neat:
         self.scoreSpecies()
         self.sortSpeciesByScore()
         self.reducePopulation(SURVIVORS=0.5)
-        self.removeStaleSpecies()
         self.scoreSpecies()
-        self.removeSpeciesWeak()
 
+        # Restore best genomes is the most important part to keep good scores in future!
         genomes_champions = []
         self.generation += 1
 
@@ -79,17 +79,32 @@ class Neat:
                 # add the champion ofeach specie
                 # not add directly because the array will increase in run time and can loop forever
                 # copy unchanged
-                genome_champion:Genome = Genome.copy(specie.genomes.data[-1], copy_specie=False)
-                genomes_champions.append(genome_champion)
+                # TOP COUPLE: elitist method. todo: parametize it
+                genome_champion1:Genome = Genome.copy(specie.genomes.data[-1], copy_specie=False)
+                genome_champion2:Genome = Genome.copy(specie.genomes.data[-2], copy_specie=False)
+                
+                genomes_champions.append(genome_champion1)
+                genomes_champions.append(genome_champion2)
         
+        
+         # After get the best of stagnant specie, remove it
+        self.removeSpeciesWeak()
+        self.removeStaleSpecies() # not needed in this implementation of XOR, but can be useful in other
+        self.reducePopulation(SURVIVORS=0.2)  # sort by genome.score ascending in all species
+        
+        # even if specie dissapear, we preserve the best of that dissapeared specie
+        # add champions at final after final reduction
         for champion in genomes_champions:
             # todo: improve this performance
             self.addGenomeAndApplySpecie(champion) # already sorted, so, the best is last
         
-        self.reducePopulation(SURVIVORS=0.2)  # sort by genome.score ascending in all species
-        self.populate() # mutate here
+
+        self.populate(reservation_space=0) # mutate here, len(genomes_champions)
         
-        # REFILL POPULATION
+       
+        
+        
+       
     
         if verbose_level > 0 and (self.generation == 1 or self.generation % debug_step == 0): 
             self.printSpecies()
@@ -100,7 +115,7 @@ class Neat:
             genome.orderNetwork()
 
         
-    def populate(self)->None:
+    def populate(self, reservation_space=0)->None:
 
         
         
@@ -112,10 +127,15 @@ class Neat:
         """
 
        
-        while len(self.genomes) < self.POPULATION:
+        while len(self.genomes) < (self.POPULATION-reservation_space):
             # species_available[random.randint(0, len(species_available)-1)]
             # self.species.data[random.randint(0, len(self.species.data)-1)]
             specie:Specie = self.species.data[random.randint(0, len(self.species.data)-1)] # 
+            
+            if specie.can_reproduce:
+                # stagnant species
+                specie.genomes.data[random.randint(0, len(specie.genomes.data)-1)].mutate()
+            
             child:Genome = specie.breed()
             child.mutate()
             child.id_specie = -1
@@ -162,8 +182,8 @@ class Neat:
         
         genome_hope:Genome = None
         if len(self.species.data) == 1:
-            specie = self.species.data[0]
-            print("END WORLD")
+            specie:Specie = self.species.data[0]
+            print(f"END WORLD with best score {specie.best_score} actual {specie.score}")
             genome_hope:Genome = Genome.copy(self.species.get(index).genomes.data[-1], copy_specie=False)
             #print(f"Specie {specie.id} sample: {specie.representative}")
             # for i in range(5):

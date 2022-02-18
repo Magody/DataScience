@@ -14,7 +14,7 @@ def run_experiment(seed,verbose_level=0):
     global input_size, output_size
     input_size = 2 + 1 # + 1 bias
 
-    max_population = 300 # 150 in paper
+    max_population = 400 # 150 in paper
     output_size = 1
 
     neat:Neat = Neat(
@@ -107,7 +107,6 @@ def run_experiment(seed,verbose_level=0):
         return fitness * fitness # square for sparse more the fitness and do better selections
 
 
-    print("EVOLVING PHASE")
     debug_step = epochs//10 # epochs//10 
     for i in tqdm(range(epochs)):
         # we can collect scores by frame, in this case we can directly collect from functions
@@ -126,10 +125,13 @@ def run_experiment(seed,verbose_level=0):
     if verbose_level > 0:
         print(f"BEST SCORE {best_genome.score}")
         print("CONNECTIONS: ", len(best_genome.connections))
+        print(best_genome)
         print(f"0 {operator} 0 =", round(best_genome.forward([1,0,0])[0],2))
         print(f"0 {operator} 1 =", round(best_genome.forward([1,0,1])[0],2))
         print(f"1 {operator} 0 =", round(best_genome.forward([1,1,0])[0],2))
         print(f"1 {operator} 1 =", round(best_genome.forward([1,1,1])[0],2))
+        print("Mutation rates:")
+        print(best_genome.mutation_rates)
 
     global genome_draw
     genome_draw = best_genome
@@ -140,13 +142,34 @@ def run_experiment(seed,verbose_level=0):
 
 temp = -math.inf
 temp2 = -1
-for s in range(10):
-    print(f"s:{s}")
-    ff = run_experiment(s,1)
+
+worst_score = math.inf
+worst_seed = -1
+
+bad_seeds = []
+
+begin = 0
+end = 10
+verbose_level = 0
+
+for s in range(begin,end+1):
+    ff = run_experiment(s,verbose_level)
+    if ff <= 9:
+        bad_seeds.append(s)
+        print(f"Bad score {s}", ff)
     if ff > temp:
         temp = ff
         temp2 = s
+    if ff < worst_score:
+        worst_score = ff
+        worst_seed = s
+
     
 print("best")
 print(temp)
 print(temp2)
+
+print("worst seed")
+print(worst_score)
+print(worst_seed)
+print("BAD seeds", bad_seeds)
