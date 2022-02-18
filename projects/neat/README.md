@@ -22,7 +22,7 @@ Axiomas:
 - We can embed genes to inherit, for instance: mutation_rates are genes in this implementation.
 - Stagnant species control can decrease general performance due to these childs mutated can generate a new good solution after N (20 < N < 50) stagnant generations. But if number of stagnant generations are really high, we should remove them.
 - Protecting stagnant species is important. With minimum 2 individuals.
-
+- enough population is better than a lot. Prefer to increase epochs than population
 To do
 - Optimice stagnation: In rare cases when the fitness of the entire population does not improve for more than 20 generations. Refocus the search in promising parts.
 - Penalize fitnesses using network size.

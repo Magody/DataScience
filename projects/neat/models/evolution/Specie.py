@@ -1,44 +1,54 @@
 
-from ..data_structures.RandomHashSet import RandomHashSet
-from ..evolution.Genome import Genome
+from ..data_structures.HashSorted import HashSorted
+from ..evolution.Genome import Genome, GenomeConfig
 from ..network.Neuron import *
 from ..network.Connection import *
 import random
 import math
+
+class SpecieConfig:
+    STAGNATED_MAXIMUM = 50
+    probability_crossover:float = 0.75, # paper: In each generation, 25% of offspring resulted from mutation without crossover. With 75% we mutate new crossover
+    C1=1, #->1 Specie delta disjoint
+    C2=1, #->1 Specie delta excess
+    C3=3, #->3 0.4 Specie delta weight # for DPNV, may be better idea to increase this to 3
+    specie_threshold=3 #->4  # Specie delta threshold
+    # when c1,c2,c3 relative higher than threshold -> more specie division
+    def __init__(
+        self,
+        STAGNATED_MAXIMUM = 50,
+        probability_crossover:float = 0.75,
+        C1=1,
+        C2=1,
+        C3=3,
+        specie_threshold=3
+    ):
+        self.STAGNATED_MAXIMUM = STAGNATED_MAXIMUM
+        self.probability_crossover:float = probability_crossover
+        self.C1=C1
+        self.C2=C2
+        self.C3=C3
+        self.specie_threshold=specie_threshold
+
 
 # A specie contains one or more genomes
 class Specie:
     STATIC_COUNTER = -1
 
     id:int = -1
-    genomes:RandomHashSet = None # type Genome
+    genomes:HashSorted = None # type Genome
     representative:Genome = None
-    score:float = 0
-
-    THRESHOLD_FAIL:int = 20
-
-    topFitness:float = -math.inf
-    staleness:int = 0
 
 
     def __init__(
         self,
         representative:Genome,
-        probability_crossover:float = 0.75, # paper: In each generation, 25% of offspring resulted from mutation without crossover. With 75% we mutate new crossover
-        C1=1, #->1 Specie delta disjoint
-        C2=1, #->1 Specie delta excess
-        C3=3, #->3 0.4 Specie delta weight # for DPNV, may be better idea to increase this to 3
-        specie_threshold=3 #->4  # Specie delta threshold
-        # when c1,c2,c3 relative higher than threshold -> more specie division
+        config:SpecieConfig
     ):
+        self.config = config
 
         Specie.STATIC_COUNTER += 1
-        self.id = Specie.STATIC_COUNTER
-
-
-        self.topFitness:float = -math.inf
-        self.staleness:int = 0
-        
+        self.id = Specie.STATIC_COUNTER       
 
         self.best_score:float = -math.inf
         self.generations_from_last_improve:int = 0
@@ -46,16 +56,7 @@ class Specie:
 
         self.can_reproduce:int = True
 
-        self.C1:float = C1
-        self.C2:float = C2
-        self.C3:float = C3
-        self.specie_threshold:float = specie_threshold
-
-        self.probability_crossover = probability_crossover
-
-
-
-        self.genomes = RandomHashSet()
+        self.genomes = HashSorted()
         representative.id_specie = self.id
         self.representative = representative
         self.genomes.add(representative)
@@ -72,24 +73,25 @@ class Specie:
     def distance(self, g1:Genome, g2:Genome)->float:
         # todo: check this function with the paper
 
-        len_connections_g1:int = len(g1.connections)
-        len_connections_g2:int = len(g2.connections)
+        len_connections_g1:int = g1.connections.size()
+        len_connections_g2:int = g2.connections.size()
 
         highest_innovation_gene1 = 0
         if len_connections_g1 != 0:
-            highest_innovation_gene1 = g1.connections[len_connections_g1-1].innovation_number
+            highest_innovation_gene1 = g1.connections.get(len_connections_g1-1).innovation_number
 
         highest_innovation_gene2 = 0
         if len_connections_g2 != 0:
-            highest_innovation_gene2 = g2.connections[len_connections_g2-1].innovation_number
+            highest_innovation_gene2 = g2.connections.get(len_connections_g2-1).innovation_number
 
         if highest_innovation_gene1 < highest_innovation_gene2:
             g = g1
             g1 = g2
             g2 = g
             # recalculate lens
-            len_connections_g1:int = len(g1.connections)
-            len_connections_g2:int = len(g2.connections)
+            len_connections_g1:int = g1.connections.size()
+            len_connections_g2:int = g2.connections.size()
+
 
         index_g1:int = 0
         index_g2:int = 0
@@ -99,8 +101,8 @@ class Specie:
         similar:int = 0
 
         while index_g1 < len_connections_g1 and index_g2 < len_connections_g2:
-            gene1:Connection = g1.connections[index_g1]
-            gene2:Connection = g2.connections[index_g2]
+            gene1:Connection = g1.connections.get(index_g1)
+            gene2:Connection = g2.connections.get(index_g2)
 
             in1:int = gene1.innovation_number
             in2:int = gene2.innovation_number
@@ -136,9 +138,9 @@ class Specie:
             # paper recommendation
             N = 1
         """
-        factor_disjoint:float = ((self.C1 * disjoint)/N)
-        factor_excess:float = ((self.C2 * excess)/N)
-        factor_weight:float = (self.C3 * weight_diff)
+        factor_disjoint:float = ((self.config.C1 * disjoint)/N)
+        factor_excess:float = ((self.config.C2 * excess)/N)
+        factor_weight:float = (self.config.C3 * weight_diff)
 
         return factor_disjoint + factor_excess + factor_weight
 
@@ -146,7 +148,7 @@ class Specie:
     def put(self, genome:Genome)->bool:
         # put only if correspond to specie
         similarity:float = self.distance(genome, self.representative)
-        if similarity < self.specie_threshold:
+        if similarity < self.config.specie_threshold:
             # it is part of the specie
             genome.id_specie = self.id
             self.genomes.add(genome)
@@ -176,15 +178,13 @@ class Specie:
             self.can_reproduce = True
         else:
             self.generations_from_last_improve += 1
-            if self.generations_from_last_improve >= Specie.THRESHOLD_FAIL:
+            if self.generations_from_last_improve >= self.config.STAGNATED_MAXIMUM:
                 self.can_reproduce = False
 
         
-
-    
     def reset(self):
         
-        self.representative = self.genomes.randomElement()
+        self.representative = self.genomes.getRandomElement()
 
         for i in range(len(self.genomes.data)):
             genome:Genome = self.genomes.data[i]
@@ -199,15 +199,15 @@ class Specie:
     def size(self)->int:
         return self.genomes.size()
 
-    def breed(self)->Genome:
+    def breed(self, configGenome:GenomeConfig)->Genome:
         
         p:float = random.random()
         len_genomes:int = self.genomes.size()
 
-        if p < self.probability_crossover:
-            input_size:int = len(self.representative.input_neurons)
-            output_size:int = len(self.representative.output_neurons)
-            genome_container:Genome = Genome.empty_genome(input_size,output_size,connect_input_output=False)
+        if p < self.config.probability_crossover:
+            input_size:int = self.representative.input_neurons.size()
+            output_size:int = self.representative.output_neurons.size()
+            genome_container:Genome = Genome.empty_genome(input_size,output_size,connect_input_output=False,config=configGenome)
             # todo: we can control and improve if are the same?
             g1:Genome = self.genomes.get(random.randint(0,len_genomes-1))
             g2:Genome = self.genomes.get(random.randint(0,len_genomes-1))

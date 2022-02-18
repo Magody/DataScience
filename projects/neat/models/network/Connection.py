@@ -24,6 +24,10 @@ class Connection(Gene):
         self.enabled:bool = True
         self.replace_index:int = 0
 
+    def setInnovationNumber(self, innovation_number):
+        self.innovation_number = innovation_number
+        self.key = innovation_number
+
     def getConnectionType(self):
         return self.neuronTo.getNeuronType()
 
@@ -38,7 +42,8 @@ class Connection(Gene):
         connection_copy.weight = connection.weight
         connection_copy.enabled = connection.enabled
         connection_copy.replace_index = connection.replace_index # todo: check replace index
-        connection_copy.innovation_number = connection.innovation_number
+        connection_copy.setInnovationNumber(connection.innovation_number)
+
 
         return connection_copy
 
@@ -68,9 +73,9 @@ class Connection(Gene):
         key = connectionGene.hashCode()
         if key in Connection.ALL_CONNECTIONS:
             # just copy the innovation_number
-            connectionGene.innovation_number = Connection.ALL_CONNECTIONS[key].innovation_number
+            connectionGene.setInnovationNumber(Connection.ALL_CONNECTIONS[key].innovation_number)
         else:
-            connectionGene.innovation_number = len(Connection.ALL_CONNECTIONS) + 1
+            connectionGene.setInnovationNumber(len(Connection.ALL_CONNECTIONS) + 1)
             Connection.ALL_CONNECTIONS[key] = connectionGene
         
         return connectionGene

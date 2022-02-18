@@ -14,7 +14,7 @@ class ActivationFunction:
         return x if x > 0 else 0
 
     @staticmethod
-    def sigmoid_bounded(x:float):
+    def sigmoid_steepened(x:float, step=4.9):
         # steepened sigmoid: allows more fine tuning at extreme activations. 
         # It's optimized to be close to linear during its steepest ascent between activations
-        return 1 / (1 + math.exp(-4.9*x))
+        return 1 / (1 + math.exp(-step*x))

@@ -4,6 +4,42 @@ from ..network.Neuron import *
 from ..network.Connection import *
 from ..network.Network import *
 
+class GenomeConfig:
+    probability_mutate_connections_weight:float = 0.8, # ->0.8
+    probability_perturb:float = 0.9, # ->0.9
+    probability_mutate_link:float = 0.2, # ->0.06 larger population may need 0.3+ because a larger population can tolerate a larger number of prospective species and greater topological diversity.
+    probability_mutate_node:float = 0.1, # ->0.05
+    probability_mutate_enable:float = 0.1, # ->0.2
+    probability_mutate_disable:float = 0.05, # ->0.1
+    # depending on these, everything will work or not
+    std_weight_initialization:float = 0.99,
+    weight_step:float = 0.01, # ->0.01
+    MAX_HIDDEN_NEURONS:int = 1
+
+    def __init__(
+        self,
+        probability_mutate_connections_weight:float = 0.8, # ->0.8
+        probability_perturb:float = 0.9, # ->0.9
+        probability_mutate_link:float = 0.2, # ->0.06 larger population may need 0.3+ because a larger population can tolerate a larger number of prospective species and greater topological diversity.
+        probability_mutate_node:float = 0.1, # ->0.05
+        probability_mutate_enable:float = 0.1, # ->0.2
+        probability_mutate_disable:float = 0.05, # ->0.1
+        std_weight_initialization:float = 0.99,
+        weight_step:float = 0.01, # ->0.01
+        MAX_HIDDEN_NEURONS:int = 1
+    ):
+        self.probability_mutate_connections_weight:float = probability_mutate_connections_weight
+        self.probability_perturb:float = probability_perturb
+        self.probability_mutate_link:float = probability_mutate_link
+        self.probability_mutate_node:float = probability_mutate_node
+        self.probability_mutate_enable:float = probability_mutate_enable
+        self.probability_mutate_disable:float = probability_mutate_disable
+        self.std_weight_initialization:float = std_weight_initialization
+        self.weight_step:float = weight_step
+        self.MAX_HIDDEN_NEURONS:int = MAX_HIDDEN_NEURONS
+
+
+
 class Genome(Network):
 
     score:float = 0
@@ -18,39 +54,31 @@ class Genome(Network):
         input_neurons:list,
         hidden_neurons:list,
         output_neurons:list,
-        probability_mutate_connections_weight:float = 0.8, # ->0.8
-        probability_perturb:float = 0.9, # ->0.9
-        probability_mutate_link:float = 0.2, # ->0.06 larger population may need 0.3+ because a larger population can tolerate a larger number of prospective species and greater topological diversity.
-        probability_mutate_node:float = 0.1, # ->0.05
-        probability_mutate_enable:float = 0.1, # ->0.2
-        probability_mutate_disable:float = 0.05, # ->0.1
-        # depending on these, everything will work or not
-        std_weight_initialization:float = 1,
-        weight_step:float = 0.01, # ->0.01
-        MAX_HIDDEN_NEURONS:int = 3
+        config:GenomeConfig
+        
     ):
         super().__init__(input_neurons,hidden_neurons,output_neurons)
-        self.MAX_HIDDEN_NEURONS:int = MAX_HIDDEN_NEURONS
 
         self.id_specie = -1
-        self.score:float = 0
 
+        self.config = config
+
+        self.setScore(0)
         # Mutation properties
         self.mutation_rates = dict()
 
 
-        self.mutation_rates["connection_weight"] = probability_mutate_connections_weight
-        self.mutation_rates["link"] = probability_mutate_link
-        self.mutation_rates["node"] = probability_mutate_node
-        self.mutation_rates["enable"] = probability_mutate_enable
-        self.mutation_rates["disable"] = probability_mutate_disable
-        self.mutation_rates["step"] = weight_step
-        self.mutation_rates["std_weight_initialization"] = std_weight_initialization
+        self.mutation_rates["connection_weight"] = config.probability_mutate_connections_weight
+        self.mutation_rates["link"] = config.probability_mutate_link
+        self.mutation_rates["node"] = config.probability_mutate_node
+        self.mutation_rates["enable"] = config.probability_mutate_enable
+        self.mutation_rates["disable"] = config.probability_mutate_disable
+        self.mutation_rates["step"] = config.weight_step
 
-        self.probability_perturb = probability_perturb
+        self.probability_perturb = config.probability_perturb
 
     @staticmethod
-    def empty_genome(input_size:int, output_size:int, prefill:bool=True, connect_input_output:bool=True):
+    def empty_genome(input_size:int, output_size:int, prefill:bool=True, connect_input_output:bool=True, config:GenomeConfig=None):
 
         input_neurons:list = []
         output_neurons:list = []
@@ -63,11 +91,11 @@ class Genome(Network):
             for innovation_number in range(input_size+1,input_size+output_size+1):
                 output_neurons.append(Neuron.getNeuron(innovation_number))
 
-        genome = Genome(input_neurons,[],output_neurons)
+        genome = Genome(input_neurons,[],output_neurons,config)
         if connect_input_output:
             # initial connection
-            for input_neuron in genome.input_neurons:
-                for output_neuron in genome.output_neurons:
+            for input_neuron in genome.input_neurons.data:
+                for output_neuron in genome.output_neurons.data:
                     genome.insertConnection(Connection.getConnection(input_neuron,output_neuron))
 
         return genome
@@ -80,14 +108,7 @@ class Genome(Network):
             [],
             [],
             [],
-            probability_mutate_connections_weight=genome.mutation_rates["connection_weight"],
-            probability_perturb=genome.probability_perturb,
-            probability_mutate_link=genome.mutation_rates["link"],
-            probability_mutate_node=genome.mutation_rates["node"],
-            probability_mutate_enable=genome.mutation_rates["enable"],
-            probability_mutate_disable=genome.mutation_rates["disable"],
-            weight_step=genome.mutation_rates["step"],
-            MAX_HIDDEN_NEURONS=genome.MAX_HIDDEN_NEURONS
+            genome.config
         )
 
 
@@ -101,7 +122,7 @@ class Genome(Network):
         for innovation_number,neuron in genome.neurons.items():
             genome_copy.insertNeuron(Neuron.copy(neuron))
 
-        for connection in genome.connections:
+        for connection in genome.connections.data:
             
             neuronFrom, neuronTo = genome_copy.getSingletonContainers(connection)
             genome_copy.insertConnection(Connection.copy(connection,neuronFrom, neuronTo))
@@ -115,10 +136,11 @@ class Genome(Network):
     def mutate(self)->None:
         # alter the rate for every mutation 
         for mutation,rate in self.mutation_rates.items():
+
             if random.random() < 0.5:
-                self.mutation_rates[mutation] = 0.99 * rate
+                self.mutation_rates[mutation] = 0.95 * rate
             else:
-                self.mutation_rates[mutation] = 1.01 * rate
+                self.mutation_rates[mutation] = 1.05 * rate
             
 
         # mutate weights
@@ -133,7 +155,7 @@ class Genome(Network):
             self.mutateGenomeLink()
 
         # increment nodes if possible
-        if len(self.hidden_neurons) < self.MAX_HIDDEN_NEURONS:
+        if len(self.hidden_neurons.data) < self.config.MAX_HIDDEN_NEURONS:
             p3:float = random.random()
             if p3 < self.mutation_rates["node"]:
                 self.mutateGenomeNode()
@@ -162,7 +184,7 @@ class Genome(Network):
 
             con = Connection.getConnection(con.neuronFrom, con.neuronTo)
 
-            if self.existConnection(con.innovation_number):
+            if self.existConnection(con):
                 # if exists or is not set to False, return
                 continue
 
@@ -235,7 +257,7 @@ class Genome(Network):
     def mutateConnectionWeights(self):
         # The system is tolerant to frequent mutations (source:paper)
         # todo: check if changes is for all connections or random
-        for connection in self.connections:
+        for connection in self.connections.data:
 
             # connection:Connection = self.getRandomConnection()
 
@@ -245,7 +267,7 @@ class Genome(Network):
                     random_weight:float = Connection.getRandomWeight(multiplier_range=1)
                     connection.weight = connection.weight + (random_weight * self.mutation_rates["step"]) # todo:check value
                 else:
-                    connection.weight = Connection.getRandomWeight(multiplier_range=self.mutation_rates["std_weight_initialization"])
+                    connection.weight = Connection.getRandomWeight(multiplier_range=self.config.std_weight_initialization)
 
                 """
                 CLAMP WEIGHTS:
@@ -260,7 +282,7 @@ class Genome(Network):
         # todo: optimice
         connections_valid:list = []
 
-        for connection in self.connections:
+        for connection in self.connections.data:
             if toggle_to_enabled:
                 if not connection.enabled:
                     connections_valid.append(connection)
@@ -297,10 +319,10 @@ class Genome(Network):
         index_g2 = 0
 
         # Connections have to be sorted for this alignment
-        while index_g1 < len(g1.connections) and index_g2 < len(g2.connections):
+        while index_g1 < g1.connections.size() and index_g2 < g2.connections.size():
 
-            connection1:Connection = g1.connections[index_g1]
-            connection2:Connection = g2.connections[index_g2]
+            connection1:Connection = g1.connections.get(index_g1)
+            connection2:Connection = g2.connections.get(index_g2)
 
             in1:int = connection1.innovation_number
             in2:int = connection2.innovation_number
@@ -342,9 +364,9 @@ class Genome(Network):
         # if before[1] == 0 and len(g1.connections) == 2:
         #   print()
 
-        while index_g1 < len(g1.connections):
+        while index_g1 < g1.connections.size():
             # todo: check if this is useful
-            connection1:Connection = g1.connections[index_g1]
+            connection1:Connection = g1.connections.get(index_g1)
             # create or retrieve neurons
             neuronFrom, neuronTo = genome.getSingletonContainers(connection1)
             connection_inherit = Connection.copy(connection1,neuronFrom, neuronTo)
@@ -369,10 +391,14 @@ class Genome(Network):
 
         return genome
 
+    def setScore(self,score):
+        self.score = score
+        self.key = score
+        
     def __str__(self)->str:
 
         output:str = ""
-        for connection in self.connections:
+        for connection in self.connections.data:
             output += f"{connection.innovation_number}-{round(connection.weight,2)}-{connection.enabled}: {connection.neuronFrom.innovation_number}->{connection.neuronTo.innovation_number} | "
 
         return output

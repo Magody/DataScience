@@ -10,7 +10,6 @@ class Neuron(Gene):
     # GLOBAL/STATIC VARIABLES
     map_neuron_innovation_number:dict = dict() # type <innovation_number:int, sample_x_y:int[2]>. Example: m[2] = (0.1,0.212121)
     
-
     # type_neuron/x: 0.1->input node, 0.9->output node, other->hidden node
     # if we want to plot the position of this neuron this will be in (x,y)
     x:float = 0
@@ -21,10 +20,10 @@ class Neuron(Gene):
 
     output:float = 0
 
-
     def __init__(self,x:float,y:float,innovation_number:int,activationFunction):
         super().__init__(innovation_number)
         self.x = x
+        self.key = x
         self.y = y
         self.output:float = 0
 
@@ -78,7 +77,6 @@ class Neuron(Gene):
 
         len_neurons_created:int = len(Neuron.map_neuron_innovation_number)
 
-        exist:bool = False
 
         innovation_number:int = len_neurons_created + 1
         if innovation_number_expected <= len_neurons_created:
@@ -88,8 +86,6 @@ class Neuron(Gene):
             x = sample[0]
             y = sample[1]
             activation_function = sample[2]
-            exist = True
-
             return Neuron.getNeuronNew(x,y,innovation_number,activation_function,True)
 
         else:
