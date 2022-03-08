@@ -15,6 +15,7 @@ class GenomeConfig:
     std_weight_initialization:float = 0.99,
     weight_step:float = 0.01, # ->0.01
     MAX_HIDDEN_NEURONS:int = 1
+    activationFunctionHidden = ActivationFunction.sigmoid_steepened
 
     def __init__(
         self,
@@ -26,7 +27,8 @@ class GenomeConfig:
         probability_mutate_disable:float = 0.05, # ->0.1
         std_weight_initialization:float = 0.99,
         weight_step:float = 0.01, # ->0.01
-        MAX_HIDDEN_NEURONS:int = 1
+        MAX_HIDDEN_NEURONS:int = 1,
+        activationFunctionHidden = ActivationFunction.sigmoid_steepened
     ):
         self.probability_mutate_connections_weight:float = probability_mutate_connections_weight
         self.probability_perturb:float = probability_perturb
@@ -37,6 +39,7 @@ class GenomeConfig:
         self.std_weight_initialization:float = std_weight_initialization
         self.weight_step:float = weight_step
         self.MAX_HIDDEN_NEURONS:int = MAX_HIDDEN_NEURONS
+        self.activationFunctionHidden = activationFunctionHidden
 
 
 
@@ -54,10 +57,9 @@ class Genome(Network):
         input_neurons:list,
         hidden_neurons:list,
         output_neurons:list,
-        config:GenomeConfig
-        
+        config:GenomeConfig                
     ):
-        super().__init__(input_neurons,hidden_neurons,output_neurons)
+        super().__init__(input_neurons,hidden_neurons,output_neurons,config.activationFunctionHidden)
 
         self.id_specie = -1
 
@@ -133,7 +135,7 @@ class Genome(Network):
     def evaluateInput(self,input:list)->list:
         return self.forward(input)
 
-    def mutate(self)->None:
+    def mutate(self, mutate_all=True)->None:
         # alter the rate for every mutation 
         for mutation,rate in self.mutation_rates.items():
 
@@ -143,30 +145,51 @@ class Genome(Network):
                 self.mutation_rates[mutation] = 1.05 * rate
             
 
-        # mutate weights
-        p1:float = random.random()
-        if p1 < self.mutation_rates["connection_weight"]:
-            # if mutate, exist a probability of become weights random or just do a step
-            self.mutateConnectionWeights()
+        if mutate_all:
+            # mutate weights
+            p1:float = random.random()
+            if p1 < self.mutation_rates["connection_weight"]:
+                # if mutate, exist a probability of become weights random or just do a step
+                self.mutateConnectionWeights()
 
-        # mutate link
-        p2:float = random.random()
-        if p2 < self.mutation_rates["link"]:
-            self.mutateGenomeLink()
+            # mutate link
+            p2:float = random.random()
+            if p2 < self.mutation_rates["link"]:
+                self.mutateGenomeLink()
 
-        # increment nodes if possible
-        if len(self.hidden_neurons.data) < self.config.MAX_HIDDEN_NEURONS:
-            p3:float = random.random()
-            if p3 < self.mutation_rates["node"]:
+            # increment nodes if possible
+            if len(self.hidden_neurons.data) < self.config.MAX_HIDDEN_NEURONS:
+                p3:float = random.random()
+                if p3 < self.mutation_rates["node"]:
+                    self.mutateGenomeNode()
+
+            p4:float = random.random()
+            if p4 < self.mutation_rates["enable"]:
+                self.mutateRandomLinkToggle(toggle_to_enabled=True)
+
+            p5:float = random.random()
+            if p5 < self.mutation_rates["disable"]:
+                self.mutateRandomLinkToggle(toggle_to_enabled=False)
+        else:
+            div = max(1, (self.mutation_rates["connection_weight"] + self.mutation_rates["link"] +
+                          self.mutation_rates["node"] + self.mutation_rates["enable"] + self.mutation_rates["disable"]))
+                        
+            r:float = random.random()
+            if r < (self.mutation_rates["connection_weight"]/div):
+                self.mutateConnectionWeights()
+            elif r < ((self.mutation_rates["connection_weight"] + self.mutation_rates["link"])/div):
+                self.mutateGenomeLink()
+            elif r < ((self.mutation_rates["connection_weight"] + self.mutation_rates["link"] +
+                       self.mutation_rates["node"])/div):
                 self.mutateGenomeNode()
-
-        p4:float = random.random()
-        if p4 < self.mutation_rates["enable"]:
-            self.mutateRandomLinkToggle(toggle_to_enabled=True)
-
-        p5:float = random.random()
-        if p5 < self.mutation_rates["disable"]:
-            self.mutateRandomLinkToggle(toggle_to_enabled=False)
+            elif r < ((self.mutation_rates["connection_weight"] + self.mutation_rates["link"] +
+                       self.mutation_rates["node"] + self.mutation_rates["enable"])/div):
+                self.mutateRandomLinkToggle(toggle_to_enabled=True)
+            elif r < ((self.mutation_rates["connection_weight"] + self.mutation_rates["link"] +
+                       self.mutation_rates["node"] + self.mutation_rates["enable"] + self.mutation_rates["disable"])/div):
+                self.mutateRandomLinkToggle(toggle_to_enabled=False)
+            
+            
 
 
     def mutateGenomeLink(self)->bool:
@@ -256,26 +279,26 @@ class Genome(Network):
 
     def mutateConnectionWeights(self):
         # The system is tolerant to frequent mutations (source:paper)
-        # todo: check if changes is for all connections or random
-        for connection in self.connections.data:
+        # TODO: check if changes is for all connections or random
+        # for connection in self.connections.data:
 
-            # connection:Connection = self.getRandomConnection()
+        connection:Connection = self.getRandomConnection()
 
-            if connection:
-                # just change one at a time
-                if random.random() < self.probability_perturb:
-                    random_weight:float = Connection.getRandomWeight(multiplier_range=1)
-                    connection.weight = connection.weight + (random_weight * self.mutation_rates["step"]) # todo:check value
-                else:
-                    connection.weight = Connection.getRandomWeight(multiplier_range=self.config.std_weight_initialization)
+        if connection:
+            # just change one at a time
+            if random.random() < self.probability_perturb:
+                random_weight:float = Connection.getRandomWeight(multiplier_range=1)
+                connection.weight = connection.weight + (random_weight * self.mutation_rates["step"]) # todo:check value
+            else:
+                connection.weight = Connection.getRandomWeight(multiplier_range=self.config.std_weight_initialization)
 
-                """
-                CLAMP WEIGHTS:
-                if connection.weight > 1:
-                    connection.weight = 1
-                elif connection.weight < -1:
-                    connection.weight = -1
-                """
+            """
+            CLAMP WEIGHTS:
+            if connection.weight > 1:
+                connection.weight = 1
+            elif connection.weight < -1:
+                connection.weight = -1
+            """
 
 
     def mutateRandomLinkToggle(self, toggle_to_enabled):

@@ -51,6 +51,7 @@ class Specie:
         self.id = Specie.STATIC_COUNTER       
 
         self.best_score:float = -math.inf
+        self.best_score_genome:float = -math.inf
         self.generations_from_last_improve:int = 0
         self.generations_alive:int = 0
 
@@ -63,7 +64,7 @@ class Specie:
         self.score:float = 0
 
     def __str__(self)->str:
-        return f"Specie: {self.id}. TFromLast: {self.generations_from_last_improve}. Alive: {self.generations_alive} . Best.: {self.best_score}. Pop.: {self.genomes.size()}. Can: {self.can_reproduce}"
+        return f"Specie: {self.id}. TFromLast: {self.generations_from_last_improve}. Alive: {self.generations_alive} . Best genome: {self.best_score_genome}. Best avg: {self.best_score}. Pop.: {self.genomes.size()}. Can: {self.can_reproduce}"
         
 
     """
@@ -164,6 +165,9 @@ class Specie:
         v:float = 0
         for i in range(len(self.genomes.data)):
             genome:Genome = self.genomes.data[i]
+            
+            self.best_score_genome = max(self.best_score_genome, genome.score)
+            
             v += genome.score
         self.score = v/self.genomes.size()
 
@@ -198,6 +202,28 @@ class Specie:
 
     def size(self)->int:
         return self.genomes.size()
+    
+    @staticmethod
+    def breedInterSpecie(configGenome:GenomeConfig, specie1, specie2)->Genome:
+        # specie1 has better score
+        p:float = random.random()
+        len_genomes1:int = specie1.genomes.size()
+        len_genomes2:int = specie2.genomes.size()
+
+        if p < specie1.config.probability_crossover:  # TODO: refactor
+            input_size:int = specie1.representative.input_neurons.size()
+            output_size:int = specie1.representative.output_neurons.size()
+            genome_container:Genome = Genome.empty_genome(input_size,output_size,connect_input_output=False,config=configGenome)
+            # todo: we can control and improve if are the same?
+            g1:Genome = specie1.genomes.get(random.randint(0,len_genomes1-1))
+            g2:Genome = specie2.genomes.get(random.randint(0,len_genomes2-1))
+
+            if g1.score > g2.score:
+                return Genome.crossover(g1,g2,genome_container)
+            return Genome.crossover(g2,g1,genome_container)
+
+        return Genome.copy(specie1.genomes.get(random.randint(0,len_genomes1-1)))
+    
 
     def breed(self, configGenome:GenomeConfig)->Genome:
         

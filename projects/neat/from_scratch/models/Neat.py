@@ -13,12 +13,20 @@ class Neat:
     genomes:list = [] # type Genome
 
 
-    def __init__(self, input_size:int, output_size:int, population:int, epochs:int, configGenome:GenomeConfig, configSpecie:SpecieConfig, elitist_save:int = 2):
+    def __init__(
+        self, input_size:int, output_size:int, population:int, epochs:int, 
+        configGenome:GenomeConfig, configSpecie:SpecieConfig, elitist_save:int = 2,
+        activationFunctionHidden = ActivationFunction.relu, activationFunctionOutput = ActivationFunction.sigmoid_steepened
+    ):
 
         self.genomes = []
         self.species = HashSorted()
 
         self.elitist_save = elitist_save
+        
+        self.activationFunctionHidden = activationFunctionHidden
+        configGenome.activationFunctionHidden = activationFunctionHidden
+        self.activationFunctionOutput = activationFunctionOutput
 
         self.configGenome = configGenome
         self.configSpecie = configSpecie
@@ -40,22 +48,23 @@ class Neat:
         Connection.ALL_CONNECTIONS.clear()
         Neuron.map_neuron_innovation_number.clear()
         self.genomes.clear()
+        
 
         # creates base input neurons and save them as reference
         for i in range(input_size):
             y = (i+1)/float(input_size+1)
             innovation_number:int = i+1
-            Neuron.getNeuronNew(0.1,y,innovation_number,ActivationFunction.relu)
+            Neuron.getNeuronNew(0.1,y,innovation_number, self.activationFunctionHidden)
 
         # creates base output neurons and save them as reference
         for i in range(output_size):
             y = (i+1)/float(output_size+1)
             innovation_number:int = input_size + (i+1)
-            Neuron.getNeuronNew(0.9,y,innovation_number,ActivationFunction.sigmoid_steepened)
+            Neuron.getNeuronNew(0.9,y,innovation_number,self.activationFunctionOutput)
 
         # creates dynamic genomes list
         for i in range(self.POPULATION):
-            genome:Genome = Genome.empty_genome(input_size, output_size, connect_input_output=True,config=self.configGenome)
+            genome:Genome = Genome.empty_genome(input_size, output_size, self.activationFunctionHidden, connect_input_output=True,config=self.configGenome)
             self.addGenomeAndApplySpecie(genome)
 
     def addGenomeAndApplySpecie(self, genome:Genome):
@@ -71,8 +80,10 @@ class Neat:
         
         self.sortSpeciesGenomesByScore()
         self.scoreSpecies()
-        self.reducePopulation(SURVIVORS=0.5) # species[*].genomes already sorted to do this
-        self.scoreSpecies()
+
+        if verbose_level > 0 and (self.generation == 1 or self.generation == self.epochs or self.generation % debug_step == 0): 
+            self.printSpecies()
+            print(end="")
 
         # Restore best genomes is the most important part to keep good scores in future!
         genomes_champions = []
@@ -92,11 +103,16 @@ class Neat:
         
          # After get the best of stagnant specie, remove it
         self.removeSpeciesWeak()
-        self.removeStaleSpecies() # not needed in this implementation of XOR, but can be useful in other
-        self.reducePopulation(SURVIVORS=0.1) # species[*].genomes already sorted to do this
+        removed_staled = self.removeStaleSpecies()
         
+        self.reducePopulation(SURVIVORS=0.2) # species[*].genomes already sorted to do this
+                
         # even if specie dissapear, we preserve the best of that dissapeared specie
         # add champions at final after final reduction
+        
+        # if removed_staled:
+        #    print()
+        
         for champion in genomes_champions:
             self.addGenomeAndApplySpecie(champion) # already sorted, so, the best is last
         
@@ -104,9 +120,7 @@ class Neat:
         self.populate(reservation_space=0) # mutate here, len(genomes_champions)
         
     
-        if verbose_level > 0 and (self.generation == 1 or self.generation == self.epochs or self.generation % debug_step == 0): 
-            self.printSpecies()
-            print(end="")
+        
 
         
     def populate(self, reservation_space=0)->None:
@@ -120,20 +134,23 @@ class Neat:
                 species_available.append(specie)
         """
 
+        pending = []
        
         while len(self.genomes) < (self.POPULATION-reservation_space):
-            # species_available[random.randint(0, len(species_available)-1)]
-            # self.species.data[random.randint(0, len(self.species.data)-1)]
-            specie:Specie = self.species.getRandomElement() 
+            specie1:Specie = self.species.getRandomElement()
+            specie2:Specie = self.species.getRandomElement()
             
-            if specie.can_reproduce:
-                # stagnant species
-                specie.genomes.getRandomElement().mutate()
+            if specie1.score > specie2.score:
+                child:Genome = Specie.breedInterSpecie(self.configGenome, specie1, specie2)
+            else:
+                child:Genome = Specie.breedInterSpecie(self.configGenome, specie2, specie1)
             
-            child:Genome = specie.breed(self.configGenome)
             child.mutate()
             child.id_specie = -1
             self.genomes.append(child)
+            pending.append(child)
+            
+        for child in pending:
             self.addToSpecie(child) # add to the same or new specie if mutate was meaningful
 
     
@@ -162,14 +179,17 @@ class Neat:
                 self.removeSpecie(i)
             i -= 1
 
-    def removeStaleSpecies(self)->None:
+    def removeStaleSpecies(self)->bool:
         # remove species that not aport in the total average sum
-       
+        removed = False
         i:int = self.species.size()-1
         while i >= 0:
             if self.species.get(i).generations_from_last_improve > self.species.get(i).config.STAGNATED_MAXIMUM:
+                print(f"REMOVED SPECIE {self.species.get(i).id}")
                 self.removeSpecie(i)
+                removed = True
             i -= 1
+        return removed
 
     def removeSpecie(self, index:int):
         
@@ -192,7 +212,7 @@ class Neat:
             self.addGenomeAndApplySpecie(genome_hope)
 
             for i in range(self.POPULATION//10):
-                self.addGenomeAndApplySpecie(Genome.empty_genome(self.input_size,self.output_size,connect_input_output=False,config=self.configGenome))
+                self.addGenomeAndApplySpecie(Genome.empty_genome(self.input_size,self.output_size, self.activationFunctionHidden,connect_input_output=False,config=self.configGenome))
 
 
 
@@ -234,7 +254,7 @@ class Neat:
             i:int = 0
             while i < amount:
                 genome:Genome = specie.genomes.get(0)
-                genome.id_specie = -1
+                genome.id_specie = -5
                 genome.score = 0
                 specie.genomes.removeByIndex(0)
                 self.genomes.remove(genome)
