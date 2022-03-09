@@ -48,7 +48,9 @@ class Specie:
         self.config = config
 
         Specie.STATIC_COUNTER += 1
-        self.id = Specie.STATIC_COUNTER       
+        self.id = Specie.STATIC_COUNTER
+        
+        self.fitness_adjusted = 0    
 
         self.best_score:float = -math.inf
         self.best_score_genome:float = -math.inf
@@ -64,7 +66,7 @@ class Specie:
         self.score:float = 0
 
     def __str__(self)->str:
-        return f"Specie: {self.id}. TFromLast: {self.generations_from_last_improve}. Alive: {self.generations_alive} . Best genome: {self.best_score_genome}. Best avg: {self.best_score}. Pop.: {self.genomes.size()}. Can: {self.can_reproduce}"
+        return f"Specie: {self.id}. LastImp: {self.generations_from_last_improve}. Alive: {self.generations_alive} . BestG: {self.best_score_genome}. Best avg: {self.best_score}. Pop.: {self.genomes.size()}"
         
 
     """
@@ -72,8 +74,33 @@ class Specie:
         - g1 must have the highest innovation number!
     """
     def distance(self, g1:Genome, g2:Genome)->float:
-        # todo: check this function with the paper
+        """
+        Returns the genetic distance between this genome and the other. This distance value
+        is used to compute genome compatibility for speciation.
+        """
+        
+       
+        distance_gene_node = 0.0
+        disjoint_nodes = 0
+        
+        for k2,n2 in g2.neurons.items():
+            if not k2 in g1.neurons:
+                disjoint_nodes += 1
+                
+        for k1,n1 in g1.neurons.items():
+            if not k1 in g2.neurons:
+                disjoint_nodes += 1
+                continue
+                
+            n2 = g2.neurons[k1]
+            # Homologous genes compute their own distance value.
+            distance_gene_node += n1.distance(n2, self.config.C3)
 
+        max_nodes = max(1,len(g1.neurons), len(g2.neurons))
+        distance_gene_node = (distance_gene_node +
+                            (self.config.C1 *
+                            disjoint_nodes)) / max_nodes
+                
         len_connections_g1:int = g1.connections.size()
         len_connections_g2:int = g2.connections.size()
 
@@ -111,7 +138,7 @@ class Specie:
             if in1 == in2:
                 # similar gene
                 similar += 1
-                weight_diff += abs(gene1.weight-gene2.weight)
+                weight_diff += gene1.distance(gene2, self.config.C3)
                 index_g1 += 1
                 index_g2 += 1
             elif in1 > in2:
@@ -131,59 +158,39 @@ class Specie:
         g2_number_genes = len_connections_g2 # + len(g2.neurons)
 
         # factor N, the number of genes in the larger genome, normalizes for genome size
-        N = max(g1_number_genes,g2_number_genes)
-        """
-        # todo: check if in complex probles this is helpful
-
-        if N < 10:
-            # paper recommendation
-            N = 1
-        """
+        N = max(1, g1_number_genes,g2_number_genes)
+        
         factor_disjoint:float = ((self.config.C1 * disjoint)/N)
         factor_excess:float = ((self.config.C2 * excess)/N)
         factor_weight:float = (self.config.C3 * weight_diff)
 
-        return factor_disjoint + factor_excess + factor_weight
+        distance_gene_connection = factor_disjoint + factor_excess + factor_weight
+        return distance_gene_node + distance_gene_connection
 
 
     def put(self, genome:Genome)->bool:
-        # put only if correspond to specie
-        similarity:float = self.distance(genome, self.representative)
-        if similarity < self.config.specie_threshold:
-            # it is part of the specie
-            genome.id_specie = self.id
-            self.genomes.add(genome)
-            return True
-
-        return False
+        """
+        genome have to be part of specie similarity < self.config.specie_threshold
+        put only if correspond to specie
+        """
+        genome.id_specie = self.id
+        self.genomes.add(genome)
 
     def forcePut(self, genome:Genome)->None:
         genome.id_specie = self.id
         self.genomes.add(genome)
 
-    def evaluateScore(self)->None:
-        v:float = 0
-        for i in range(len(self.genomes.data)):
-            genome:Genome = self.genomes.data[i]
-            
-            self.best_score_genome = max(self.best_score_genome, genome.score)
-            
-            v += genome.score
-        self.score = v/self.genomes.size()
-
 
     def increaseGeneration(self)->None:
         self.generations_alive += 1
 
-        score_rounded:float = round(self.score, 1)
+        score_rounded:float = round(self.score, 2)
         if score_rounded > self.best_score:
             self.generations_from_last_improve = 0
             self.best_score = score_rounded
             self.can_reproduce = True
         else:
             self.generations_from_last_improve += 1
-            if self.generations_from_last_improve >= self.config.STAGNATED_MAXIMUM:
-                self.can_reproduce = False
 
         
     def reset(self):
@@ -233,7 +240,7 @@ class Specie:
         if p < self.config.probability_crossover:
             input_size:int = self.representative.input_neurons.size()
             output_size:int = self.representative.output_neurons.size()
-            genome_container:Genome = Genome.empty_genome(input_size,output_size,connect_input_output=False,config=configGenome)
+            genome_container:Genome = Genome.empty_genome(input_size,output_size, configGenome.std_weight_initialization,connect_input_output=False,config=configGenome)
             # todo: we can control and improve if are the same?
             g1:Genome = self.genomes.get(random.randint(0,len_genomes-1))
             g2:Genome = self.genomes.get(random.randint(0,len_genomes-1))

@@ -68,11 +68,11 @@ class TestLogicGates:
         for i in range(2):
             for j in range(2):
 
-                inp:list = [1,i,j]
+                inp:list = [i,j]
 
                 output:list = genome.forward(inp)
 
-                if inp[1] == inp[2]:
+                if inp[0] == inp[1]:
                     # Expected: 0
                     fitness += (1 - output[0])
                 else:
@@ -87,10 +87,13 @@ class TestLogicGates:
         print(f"BEST SCORE {genome.score}")
         print("CONNECTIONS: ", genome.connections.size())
         print(genome)
-        print(f"0 - 0 =", round(genome.forward([1,0,0])[0],2))
-        print(f"0 - 1 =", round(genome.forward([1,0,1])[0],2))
-        print(f"1 - 0 =", round(genome.forward([1,1,0])[0],2))
-        print(f"1 - 1 =", round(genome.forward([1,1,1])[0],2))
+        for n in genome.hidden_neurons.data:
+            # print("BIAS: ", n.bias)
+            pass
+        print(f"0 - 0 =", round(genome.forward([0,0])[0],2))
+        print(f"0 - 1 =", round(genome.forward([0,1])[0],2))
+        print(f"1 - 0 =", round(genome.forward([1,0])[0],2))
+        print(f"1 - 1 =", round(genome.forward([1,1])[0],2))
         print("Mutation rates:")
         print(genome.mutation_rates)
 
@@ -100,9 +103,11 @@ class TestLogicGates:
         random.seed(seed)
 
         epochs = neat.epochs
-
-        debug_step = epochs//20 # epochs//10 
+        completed = False
+        debug_step = epochs//100 # epochs//10 
         for i in tqdm(range(epochs)):
+            print("\nNEW EPOCH\n")
+            
             # we can collect scores by frame, in this case we can directly collect from functions
             for j in range(len(neat.genomes)):
                 genome:Genome = neat.genomes[j]
@@ -115,12 +120,24 @@ class TestLogicGates:
                     genome.setScore(self.scoreAND(genome))
                 else:
                     raise Exception(f"Unknown gate '{gate}'")
-            
-            neat.evolve(verbose_level=verbose_level-1,debug_step=debug_step)
+                
+                if genome.score > 15.5:
+                    completed = True
+                    break
+                # TODO: get the best genome while running
+                # TODO: check for fitness max, criterion. Reached
+            if completed:
+                break
+            for j in range(len(neat.genomes)):
+                genome:Genome = neat.genomes[j]
+                # print(f"RESULT Genome {j}: {genome}")
+                
+                
+            neat.evolve(verbose_level=verbose_level-1)
             # best_genome = neat.getBestGenome()
             # self.printSummary(best_genome)
             # print()
-                
+
         # sanity score: check
         # evaluate final genomes
         for j in range(len(neat.genomes)):
@@ -143,26 +160,26 @@ class TestLogicGates:
         return best_genome
 
     def executeSanityCheck(self,begin=1,end=10,verbose_level = 0):
-        input_size = 2 + 1 # + 1 bias
+        input_size = 2 # + 1 bias
         output_size = 1
-        max_population = 100 # 200
-        epochs = 100
+        max_population = 200 # 200
+        epochs = 1000
 
         configGenome:GenomeConfig = GenomeConfig(
             probability_perturb = 0.9,
             probability_mutate_connections_weight = 0.8,
-            probability_mutate_link = 0.05,
-            probability_mutate_node = 0.03,
-            probability_mutate_enable = 0.05,
-            probability_mutate_disable = 0.03,
-            std_weight_initialization = 0.01,
-            weight_step = 0.2,
+            probability_mutate_connection_add=0.05,
+            probability_mutate_connection_delete=0.1,
+            probability_mutate_node_add= 0.05,
+            probability_mutate_node_delete= 0.05,
+            std_weight_initialization = 0.99,
+            weight_step = 0.1,
             MAX_HIDDEN_NEURONS = 3
         )
 
         configSpecie:SpecieConfig = SpecieConfig(
-            STAGNATED_MAXIMUM = 10,
-            probability_crossover = 0.8,
+            STAGNATED_MAXIMUM = 20,
+            probability_crossover = 0.9,
             C1=1,
             C2=1,
             C3=3,
@@ -179,9 +196,9 @@ class TestLogicGates:
 
         for s in range(begin,end+1):
             neat:Neat = Neat(
-                input_size,output_size,max_population,epochs,configGenome,configSpecie,elitist_save=3,
-                activationFunctionHidden=ActivationFunction.sigmoid,
-                activationFunctionOutput=ActivationFunction.sigmoid_steepened
+                input_size,output_size,max_population,epochs,configGenome,configSpecie,elitist_save=2,
+                activationFunctionHidden=ActivationFunction.relu,
+                activationFunctionOutput=ActivationFunction.sigmoid
             )
 
             result = self.run_experiment(neat,seed=s,gate="xor",verbose_level=verbose_level).score

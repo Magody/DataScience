@@ -4,6 +4,8 @@ from models.Neat import *
 import random
 from models.evolution.Genome import Genome
 from tqdm import tqdm
+from tests import TestLogicGates
+
 
 
 
@@ -95,143 +97,50 @@ font_neuron_output =  pygame.font.Font(None, 30)
 
 
 ######
-neat = None
+
+input_size = 2 # + 1 bias
+output_size = 1
+max_population = 200 # 200
+epochs = 1000
+seed = 2
+verbose_level = 10
+test = TestLogicGates()
+
+configGenome:GenomeConfig = GenomeConfig(
+    probability_perturb = 0.9,
+    probability_mutate_connections_weight = 0.8,
+    probability_mutate_connection_add=0.05,
+    probability_mutate_connection_delete=0.1,
+    probability_mutate_node_add= 0.05,
+    probability_mutate_node_delete= 0.05,
+    std_weight_initialization = 0.99,
+    weight_step = 0.1,
+    MAX_HIDDEN_NEURONS = 3
+)
+
+configSpecie:SpecieConfig = SpecieConfig(
+    STAGNATED_MAXIMUM = 20,
+    probability_crossover = 0.9,
+    C1=1,
+    C2=1,
+    C3=2,
+    specie_threshold=3
+)
+
+neat:Neat = Neat(
+    input_size,output_size,max_population,epochs,configGenome,configSpecie,elitist_save=2,
+    activationFunctionHidden=ActivationFunction.relu,
+    activationFunctionOutput=ActivationFunction.sigmoid
+)
+
+
 global current_input
-current_input = [1,0,0]
-def run_experiment(seed,verbose_level=0):
+current_input = [0,0]
+best_genome = test.run_experiment(neat,seed=seed,gate="xor",verbose_level=verbose_level)
 
-    # replicate experiment
-    random.seed(seed)
-
-    epochs = 200 # 100 in paper
-    global input_size, output_size
-    input_size = 2 + 1 # + 1 bias
-
-    max_population = 400 # 150 in paper
-    output_size = 1
-
-    neat:Neat = Neat(
-        input_size,output_size,max_population
-    )
-
-    global current_input
-    current_input = [1,0,0]
-
-    
-
-    def scoreAND(genome:Genome)->float:
-        # The resulting number was squared to give proportionally more fitness the closer a network was to a solution.
-                
-        # fitness function: XOR
-        global input_size, output_size
-
-        fitness:float = 0
-
-        for i in range(2):
-            for j in range(2):
-
-                inp:list = [1,i,j]
-
-                output:list = genome.forward(inp)
-
-                if inp[1] == 1 and inp[2] == 1:
-                    # 1
-                    fitness += output[0]
-                else:
-                    # 0
-                    fitness += (1 - output[0])
-
-        # maximum can get: 4
-        return fitness * fitness # square for sparse more the fitness and do better selections
-
-
-    def scoreOR(genome:Genome)->float:
-        # The resulting number was squared to give proportionally more fitness the closer a network was to a solution.
-                
-        # fitness function: XOR
-        global input_size, output_size
-
-        fitness:float = 0
-
-        for i in range(2):
-            for j in range(2):
-
-                inp:list = [1,i,j]
-
-                output:list = genome.forward(inp)
-
-                if inp[1] == 1 or inp[2] == 1:
-                    # 1
-                    fitness += output[0]
-                else:
-                    # 0
-                    fitness += (1 - output[0])
-
-        # maximum can get: 4
-        final_fitness = fitness * fitness
-        final_fitness_with_penalization = final_fitness
-        return final_fitness_with_penalization # square for sparse more the fitness and do better selections
-
-
-    def scoreXOR(genome:Genome)->float:
-        # The resulting number was squared to give proportionally more fitness the closer a network was to a solution.
-                
-        # fitness function: XOR
-        global input_size, output_size
-
-        fitness:float = 0
-
-        for i in range(2):
-            for j in range(2):
-
-                inp:list = [1,i,j]
-
-                output:list = genome.forward(inp)
-
-                if inp[1] == inp[2]:
-                    # Expected: 0
-                    fitness += (1 - output[0])
-                else:
-                    # Expected: 1
-                    fitness += output[0]
-
-
-        # maximum can get: 4
-        return fitness * fitness # square for sparse more the fitness and do better selections
-
-
-    print("EVOLVING PHASE")
-    debug_step = epochs//10 # epochs//10 
-    for i in tqdm(range(epochs)):
-        # we can collect scores by frame, in this case we can directly collect from functions
-        for j in range(len(neat.genomes)):
-            genome:Genome = neat.genomes[j]
-            genome.score = scoreXOR(genome)
-        
-        neat.evolve(verbose_level=verbose_level-1,debug_step=debug_step)
-            
-
-    best_genome = neat.getBestGenome()
-
-    operator = "&"
-    
-    
-    if verbose_level > 0:
-        print(f"BEST SCORE {best_genome.score}")
-        print("CONNECTIONS: ", len(best_genome.connections))
-        print(f"0 {operator} 0 =", round(best_genome.forward([1,0,0])[0],2))
-        print(f"0 {operator} 1 =", round(best_genome.forward([1,0,1])[0],2))
-        print(f"1 {operator} 0 =", round(best_genome.forward([1,1,0])[0],2))
-        print(f"1 {operator} 1 =", round(best_genome.forward([1,1,1])[0],2))
-
-    global genome_draw
-    genome_draw = best_genome
-
-    #for specie in neat.species.data:
-    #    print(f"Specie {specie.id} sample: {specie.representative}")
-    return best_genome.score
-
-run_experiment(seed=3,verbose_level=1)
+test.printSummary(best_genome)
+global genome_draw
+genome_draw = best_genome
 
 
 #####
@@ -288,16 +197,16 @@ def drawGenome(genome:Genome):
 
     
 
-    for neuron in genome.input_neurons:
+    for neuron in genome.input_neurons.data:
         drawNeuron(neuron,color=BLUE)
 
-    for neuron in genome.hidden_neurons:
+    for neuron in genome.hidden_neurons.data:
         drawNeuron(neuron,color=(59, 94, 68))
 
-    for i,neuron in enumerate(genome.output_neurons):
+    for i,neuron in enumerate(genome.output_neurons.data):
         drawNeuron(neuron,color=(125, 25, 60))
 
-    drawConnections(genome.connections)
+    drawConnections(genome.connections.data)
 
    
     
@@ -309,27 +218,26 @@ def drawGenome(genome:Genome):
 
 def callbackForward1():
     global current_input, genome_draw
-    current_input = [1,0,0]
+    current_input = [0,0]
     drawGenome(genome_draw)
 
 def callbackForward2():
     global current_input, genome_draw
-    current_input = [1,0,1]
+    current_input = [0,1]
     drawGenome(genome_draw)
 
 def callbackForward3():
     global current_input, genome_draw
-    current_input = [1,1,0]
+    current_input = [1,0]
     drawGenome(genome_draw)
 
 def callbackForward4():
     global current_input, genome_draw
-    current_input = [1,1,1]
+    current_input = [1,1]
     drawGenome(genome_draw)
 
 #genome_draw = neat.empty_genome()
 
-global genome_draw
 drawGenome(genome_draw)
 
 while running:

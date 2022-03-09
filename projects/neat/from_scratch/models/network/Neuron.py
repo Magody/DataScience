@@ -10,6 +10,7 @@ class Neuron(Gene):
     # GLOBAL/STATIC VARIABLES
     map_neuron_innovation_number:dict = dict() # type <innovation_number:int, sample_x_y:int[2]>. Example: m[2] = (0.1,0.212121)
     
+    bias:float = 0
     # type_neuron/x: 0.1->input node, 0.9->output node, other->hidden node
     # if we want to plot the position of this neuron this will be in (x,y)
     x:float = 0
@@ -26,13 +27,21 @@ class Neuron(Gene):
         self.key = x
         self.y = y
         self.output:float = 0
+        self.bias = 0
 
         self.activationFunction = activationFunction
 
+    def distance(self, other, compatibility_weight_coefficient):
+        d = abs(self.bias - other.bias) #  + abs(self.output - other.output)
+        if self.activationFunction != other.activationFunction:
+            d += 1.0
+        return d * compatibility_weight_coefficient
+    
     @staticmethod
     def copy(neuron):
         neuron_copy = Neuron(neuron.x,neuron.y,neuron.innovation_number,neuron.activationFunction)
         neuron_copy.output = neuron.output
+        neuron_copy.bias = neuron.bias
         return neuron_copy
         
     def getNeuronType(self)->int:

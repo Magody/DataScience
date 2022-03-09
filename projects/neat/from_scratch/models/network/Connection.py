@@ -17,12 +17,18 @@ class Connection(Gene):
 
     replace_index:int = 0
 
-    def __init__(self,from_neuron:Neuron,to_neuron:Neuron):
+    def __init__(self,from_neuron:Neuron,to_neuron:Neuron, weight):
         self.neuronFrom = from_neuron
         self.neuronTo = to_neuron
-        self.weight:float = Connection.getRandomWeight(0.1)
+        self.weight:float = weight
         self.enabled:bool = True
         self.replace_index:int = 0
+        
+    def distance(self, other, compatibility_weight_coefficient):
+        d = abs(self.weight - other.weight)
+        if self.enabled != other.enabled:
+            d += 1.0
+        return d * compatibility_weight_coefficient        
 
     def setInnovationNumber(self, innovation_number):
         self.innovation_number = innovation_number
@@ -38,8 +44,7 @@ class Connection(Gene):
         We have to pass containers by reference for neurons!!
         Creates a connection from new neurons replicated from innovation numbers in connection
         """
-        connection_copy:Connection = Connection(from_neuron_new, to_neuron_new)
-        connection_copy.weight = connection.weight
+        connection_copy:Connection = Connection(from_neuron_new, to_neuron_new, connection.weight)
         connection_copy.enabled = connection.enabled
         connection_copy.replace_index = connection.replace_index # todo: check replace index
         connection_copy.setInnovationNumber(connection.innovation_number)
@@ -64,11 +69,11 @@ class Connection(Gene):
         return (random.random() * 2 - 1) * multiplier_range
 
     @staticmethod
-    def getConnection(node1:Neuron, node2:Neuron):
+    def getConnection(node1:Neuron, node2:Neuron, weight):
         # return Connection
 
         # have to be a new object with same existing innovation number or new one
-        connectionGene:Connection = Connection(node1,node2)
+        connectionGene:Connection = Connection(node1,node2,weight)
 
         key = connectionGene.hashCode()
         if key in Connection.ALL_CONNECTIONS:
@@ -82,13 +87,13 @@ class Connection(Gene):
 
     @staticmethod
     def setReplaceIndex(node1:Neuron, node2:Neuron, index:int)->None:
-        connectionGene:Connection = Connection(node1,node2)
+        connectionGene:Connection = Connection(node1,node2,-1)
         key = connectionGene.hashCode()
         Connection.ALL_CONNECTIONS[key].replace_index = index
 
     @staticmethod
     def getReplaceIndex(node1:Neuron, node2:Neuron)->int:
-        connectionGene:Connection = Connection(node1,node2)
+        connectionGene:Connection = Connection(node1,node2,-1)
         key = connectionGene.hashCode()
         data:Connection = Connection.ALL_CONNECTIONS.get(key, None)
 

@@ -1,4 +1,6 @@
 import random
+
+from sympy import S
 from .data_structures.HashSorted import HashSorted
 from .evolution.Genome import Genome, GenomeConfig
 from .network.Neuron import *
@@ -18,7 +20,7 @@ class Neat:
         configGenome:GenomeConfig, configSpecie:SpecieConfig, elitist_save:int = 2,
         activationFunctionHidden = ActivationFunction.relu, activationFunctionOutput = ActivationFunction.sigmoid_steepened
     ):
-
+        self.genome_best = None
         self.genomes = []
         self.species = HashSorted()
 
@@ -64,95 +66,106 @@ class Neat:
 
         # creates dynamic genomes list
         for i in range(self.POPULATION):
-            genome:Genome = Genome.empty_genome(input_size, output_size, self.activationFunctionHidden, connect_input_output=True,config=self.configGenome)
-            self.addGenomeAndApplySpecie(genome)
+            genome:Genome = Genome.empty_genome(input_size, output_size, self.configGenome.std_weight_initialization, self.activationFunctionHidden, connect_input_output=True,config=self.configGenome)
+            self.addGenomeAndSpeciate(genome)
 
-    def addGenomeAndApplySpecie(self, genome:Genome):
-        self.genomes.append(genome)
-        self.addToSpecie(genome)
-
-    def sortSpeciesGenomesByScore(self):
-        for i in range(len(self.species.data)):
-            specie:Specie = self.species.data[i]
-            specie.genomes.data.sort(key=lambda genome: genome.score)
+    
+    
                
-    def evolve(self,verbose_level=1,debug_step=5)->None:
+    def evolve(self,verbose_level=1,debug_step=1)->None:
+                
+        self.removeStagnantSpecies()
+        # TODO: check species extinction
+        fitnesses_adjusted = self.calculateFitnessesSpecies()
+        # self.removeSpeciesWeak()
         
-        self.sortSpeciesGenomesByScore()
-        self.scoreSpecies()
+        sizes_previous = [len(s.genomes.data) for s in self.species.data]
+        min_species_size = 2
+        min_species_size = max(min_species_size, self.elitist_save)
+        sizes_actual = Neat.compute_spawn(fitnesses_adjusted, sizes_previous, self.POPULATION, min_species_size)
+        
+        
 
         if verbose_level > 0 and (self.generation == 1 or self.generation == self.epochs or self.generation % debug_step == 0): 
             self.printSpecies()
+
             print(end="")
+            # print(sizes_previous, sizes_actual)
 
         # Restore best genomes is the most important part to keep good scores in future!
-        genomes_champions = []
+        
         self.generation += 1
-
-        for specie in self.species.data:
-            specie.increaseGeneration()
-            if len(specie.genomes.data) >= 3:
-                # add the champion ofeach specie
-                # not add directly because the array will increase in run time and can loop forever
-                # copy unchanged, so preserve best
-                
-                index = specie.genomes.size()-1
-                for i in range(self.elitist_save):
-                    genomes_champions.append(Genome.copy(specie.genomes.data[index-i], copy_specie=False))
-        
-        
-         # After get the best of stagnant specie, remove it
-        self.removeSpeciesWeak()
-        removed_staled = self.removeStaleSpecies()
-        
         self.reducePopulation(SURVIVORS=0.2) # species[*].genomes already sorted to do this
-                
-        # even if specie dissapear, we preserve the best of that dissapeared specie
-        # add champions at final after final reduction
-        
-        # if removed_staled:
-        #    print()
-        
-        for champion in genomes_champions:
-            self.addGenomeAndApplySpecie(champion) # already sorted, so, the best is last
-        
-
-        self.populate(reservation_space=0) # mutate here, len(genomes_champions)
+        self.populate(sizes_actual)
         
     
         
 
         
-    def populate(self, reservation_space=0)->None:
-
-        
-        
+    def populate(self, sizes:list)->None:
         """
-        species_available:list = []
-        for specie in self.species.data:
-            if specie.can_reproduce:
-                species_available.append(specie)
+        Genomes of each specie have to be sorted before
+        Genomes % only have to be alive before
         """
+        
+        population_new:list = []
+        
+        for i in range(len(sizes)):
+            # each species always at least gets to retain its elites.
+            size_remaining: int = max(sizes[i], self.elitist_save)
+            specie: Specie = self.species.get(i)
+            
+            index = specie.genomes.size()-1
+            
+            # Transfer elites to new generation.                    
+            for i in range(min(self.elitist_save, len(specie.genomes.data))):
+                population_new.append(Genome.copy(specie.genomes.data[index-i], copy_specie=False))
+                size_remaining -= 1
+                
+            if size_remaining <= 0:
+                # specie complete
+                continue
+            
+            while size_remaining > 0:
+                size_remaining -= 1
+                child:Genome = specie.breed(self.configGenome)
+                child.mutate()
+                child.id_specie = -1  # TODO: ensure have different id
+                population_new.append(child)
+                        
+         
+        # empty current species and genomes references
+        for index in range(self.species.size()):
+            specie:Specie = self.species.get(index)
+            specie_genomes: HashSorted = specie.genomes
+            for genome in specie_genomes.data:
+                # remove the references of genomes in central neat instance
+                self.genomes.remove(genome)
 
-        pending = []
-       
-        while len(self.genomes) < (self.POPULATION-reservation_space):
-            specie1:Specie = self.species.getRandomElement()
-            specie2:Specie = self.species.getRandomElement()
+            while specie_genomes.size() > 0:
+                specie_genomes.removeByIndex(0)
+                
+            assert len(specie_genomes.data) == 0
+            assert not specie.representative is None
             
-            if specie1.score > specie2.score:
-                child:Genome = Specie.breedInterSpecie(self.configGenome, specie1, specie2)
-            else:
-                child:Genome = Specie.breedInterSpecie(self.configGenome, specie2, specie1)
+            # set new representative from the new population
+            candidates = []
+            for g in population_new:
+                d = specie.distance(specie.representative, g)
+                candidates.append((d, g))
+                
+            _, new_rep = min(candidates, key=lambda x: x[0])
+            specie.representative = new_rep
+            self.genomes.append(new_rep)
+            specie.put(new_rep)
+            population_new.remove(new_rep)
             
-            child.mutate()
-            child.id_specie = -1
-            self.genomes.append(child)
-            pending.append(child)
-            
-        for child in pending:
-            self.addToSpecie(child) # add to the same or new specie if mutate was meaningful
-
+        # representative deleted and added
+        assert len(self.genomes) == self.species.size()   
+        
+        for genome in population_new:
+            self.addGenomeAndSpeciate(genome)
+                
     
     def removeExtinctSpecies(self)->None:
         i:int = self.species.size()-1
@@ -179,80 +192,117 @@ class Neat:
                 self.removeSpecie(i)
             i -= 1
 
-    def removeStaleSpecies(self)->bool:
+    def removeStagnantSpecies(self)->bool:
         # remove species that not aport in the total average sum
+        
         removed = False
+                
         i:int = self.species.size()-1
         while i >= 0:
             if self.species.get(i).generations_from_last_improve > self.species.get(i).config.STAGNATED_MAXIMUM:
                 print(f"REMOVED SPECIE {self.species.get(i).id}")
                 self.removeSpecie(i)
-                removed = True
+                removed = True          
             i -= 1
+        
         return removed
+        
 
     def removeSpecie(self, index:int):
-        
-        genome_hope:Genome = None
-        if len(self.species.data) == 1:
-            specie:Specie = self.species.data[0]
-            print(f"END WORLD with best score {specie.best_score} actual {specie.score}")
-            genome_hope:Genome = Genome.copy(self.species.get(index).genomes.data[-1], copy_specie=False)
-            
-
-        # todo: improve if language not support object memory
+                
         for genome in self.species.get(index).genomes.data:
             # remove the references of genomes
             self.genomes.remove(genome)
 
         self.species.removeByIndex(index)
 
-        if not genome_hope is None:
-            # copy of the best:
-            self.addGenomeAndApplySpecie(genome_hope)
-
-            for i in range(self.POPULATION//10):
-                self.addGenomeAndApplySpecie(Genome.empty_genome(self.input_size,self.output_size, self.activationFunctionHidden,connect_input_output=False,config=self.configGenome))
-
-
-
-
-
-
+    def addGenomeAndSpeciate(self, genome:Genome):
+        self.genomes.append(genome)
+        self.addToSpecie(genome)
 
     def addToSpecie(self,genome:Genome)->None:
-        # reset all except representative
+        """
+        Assumes the representative was already defined
+        """
             
-        if genome.id_specie != -1:
-            raise Exception("already has specie")
-
-        found:bool = False
-        for j in range(len(self.species.data)):
-            s:Specie = self.species.data[j]
-            if s.put(genome):
-                found = True
-                break
+        assert genome.id_specie == -1
         
-        if not found:
-            # create a new specie and the representative will be this new client
-            self.species.add(Specie(genome, self.configSpecie))
+        candidates = []
+        for i in range(len(self.species.data)):
+            specie:Specie = self.species.data[i]
+            similarity:float = specie.distance(genome, specie.representative)
+            if similarity < specie.config.specie_threshold:
+                # it is part of the specie
+                candidates.append((similarity,specie))
+        
+        if len(candidates) > 0:
+            _, specie = min(candidates, key=lambda x: x[0])
+            specie.put(genome)
+        else:
+            self.species.add(Specie(genome, self.configSpecie))           
+            
 
-    def scoreSpecies(self):
+    def calculateFitnessesSpecies(self, increase_generation=True):
+        """
+        Set fitness and adjusted fitness for every specie
+        """
+        # print("Calculating fitness")
+        fitnesses_all = []
         # evaluate scores for each specie
         for i in range(len(self.species.data)):
             s:Specie = self.species.data[i]
-            s.evaluateScore()
+            # TODO: optimice reducing population here directly and using that adjusted fitness
+            s.genomes.data.sort(key=lambda genome: genome.score)
+            
+            
+            v:float = 0
+            for i in range(len(s.genomes.data)):
+                genome:Genome = s.genomes.data[i]
+                s.best_score_genome = round(max(s.best_score_genome, genome.score),2)                
+                v += genome.score
+                fitnesses_all.append(genome.score)
+                
+                #if len(genome.connections.data) > 3:
+                #    print(genome)
+
+            if self.genome_best is None or self.genome_best.score < s.genomes.data[-1].score:
+                self.genome_best = s.genomes.data[-1]
+            
+            # calculate the mean specie fitness (msf)
+            s.score = v/s.genomes.size()
+            
+            
+            if increase_generation:
+                s.increaseGeneration()
+            
+        # calculating adjusted fitnesses
+        min_fitness = min(fitnesses_all)
+        max_fitness = max(fitnesses_all)
+        # Do not allow the fitness range to be zero, as we divide by it below.
+        fitnesses_adjusted = []
+        fitness_range = max(1.0, max_fitness - min_fitness)
+        for i in range(len(self.species.data)):
+            s:Specie = self.species.data[i]
+            s.fitness_adjusted = (s.score - min_fitness) / fitness_range
+            fitnesses_adjusted.append(s.fitness_adjusted)
+
+        return fitnesses_adjusted
+        
     
-    def reducePopulation(self, SURVIVORS:float = 0.5)->None:
+    def reducePopulation(self, SURVIVORS:float = 0.2)->None:
         # kill X% of population
         for i in range(len(self.species.data)):
             specie:Specie = self.species.data[i]
             percentage = 1-SURVIVORS
             # kill clients with low score
-            amount:float = math.floor(percentage * specie.genomes.size())
+            amount_to_kill:int = int(math.floor(percentage * specie.genomes.size()))
+            amount_survive = specie.genomes.size() - amount_to_kill
+            if amount_survive < 2:
+                amount_to_kill -= (2 - amount_survive) # increase survivors to minimum 2
+            
 
             i:int = 0
-            while i < amount:
+            while i < amount_to_kill:
                 genome:Genome = specie.genomes.get(0)
                 genome.id_specie = -5
                 genome.score = 0
@@ -276,4 +326,41 @@ class Neat:
         for i in range(len(self.species.data)):
             s:Specie = self.species.data[i]
             print(s)
+            
+        # print("Best genome", self.genome_best)
         print("##########################################")
+
+    @staticmethod
+    def compute_spawn(fitnesses_adjusted, previous_sizes, pop_size, min_species_size):
+        """
+        Compute the proper number of offspring per species (proportional to fitness).
+        Code got from neat-python library
+        """
+        af_sum = sum(fitnesses_adjusted)
+
+        spawn_amounts = []
+        for af, ps in zip(fitnesses_adjusted, previous_sizes):
+            if af_sum > 0:
+                s = max(min_species_size, af / af_sum * pop_size)
+            else:
+                s = min_species_size
+
+            d = (s - ps) * 0.5
+            c = int(round(d))
+            spawn = ps
+            if abs(c) > 0:
+                spawn += c
+            elif d > 0:
+                spawn += 1
+            elif d < 0:
+                spawn -= 1
+
+            spawn_amounts.append(spawn)
+
+        # Normalize the spawn amounts so that the next generation is roughly
+        # the population size requested by the user.
+        total_spawn = sum(spawn_amounts)
+        norm = pop_size / total_spawn
+        spawn_amounts = [max(min_species_size, int(round(n * norm))) for n in spawn_amounts]
+
+        return spawn_amounts

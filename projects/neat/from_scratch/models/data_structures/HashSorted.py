@@ -90,5 +90,8 @@ class HashSorted:
         
     def remove(self,object):
         # O(1)
-        self.hashSet.remove(object)
+        if self.use_key:
+            self.hashSet.remove(object.key)
+        else:
+            self.hashSet.remove(object)
         self.data.remove(object)

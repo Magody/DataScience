@@ -91,7 +91,28 @@ class Network(HashStructure):
             self.output_neurons.addSorted(neuron)            
         else:
             raise Exception(f"Not supported connection type: {neuron.x}")
+        
+        assert len(self.neurons) == (self.input_neurons.size()+self.hidden_neurons.size()+self.output_neurons.size())
+        
 
+    def removeNeuron(self,neuron:Neuron)->None:
+        if not self.existNeuronInnovationNumber(neuron.innovation_number):
+            return
+
+        neuron_type:int = neuron.getNeuronType()
+
+        del self.neurons[neuron.innovation_number]
+
+        if neuron_type == EnumConnectionTypes.TYPE_INPUT:
+            self.input_neurons.remove(neuron)
+        elif neuron_type == EnumConnectionTypes.TYPE_HIDDEN:
+            self.hidden_neurons.remove(neuron)   
+        elif neuron_type == EnumConnectionTypes.TYPE_OUTPUT:
+            self.output_neurons.remove(neuron)        
+        else:
+            raise Exception(f"Not supported connection type: {neuron.x}")
+        
+        assert len(self.neurons) == (self.input_neurons.size()+self.hidden_neurons.size()+self.output_neurons.size())
         
     def insertConnection(self,connection:Connection)->None:
        
@@ -110,9 +131,7 @@ class Network(HashStructure):
             self.output_connections[connection.neuronTo.innovation_number].append(connection)
             
         else:
-            raise Exception(f"Not supported connection type: {connection.neuronTo} {connection_type}")
-
-        
+            raise Exception(f"Not supported connection type: {connection.neuronTo} {connection_type}")        
 
         
 
@@ -129,6 +148,23 @@ class Network(HashStructure):
             raise Exception(f"Not supported connection type: {connection.neuronTo} {connection_type}")
 
         self.connections.remove(connection)
+        
+        
+        
+    def checkCongruencyConnections(self):
+        total_connections_hidden = 0
+        total_connections_output = 0
+        
+        for key,conns in self.hidden_connections.items():
+            total_connections_hidden += len(conns)
+            
+        
+        for key,conns in self.output_connections.items():
+            total_connections_output += len(conns)
+        
+        
+        return self.connections.size() == (total_connections_hidden+total_connections_output)
+            
 
     def getRandomNeuron(self):
 
@@ -152,18 +188,29 @@ class Network(HashStructure):
         elif a.x == 0.9:
             family = 2
         else:
+            # is hidden
             family = 1
-
-        families.remove(family)
+        if family != 1:
+            families.remove(family)
+            # TODO: Check if hidden neurons can be connected to other hidden neurons
+            
         other_family = families[random.randint(0,len(families)-1)]
 
         if other_family == 1:
-            len_hidden = self.hidden_neurons.size()
-            if len_hidden == 0:
+            front_neurons = []
+            for h in self.hidden_neurons.data:
+                if h.x <= a.x:
+                    continue
+                front_neurons.append(h)
+                    
+            len_front_hidden = len(front_neurons)
+            
+            if len_front_hidden == 0:
+                # Can not connect to "nothing" and can not connect to itself
                 families.remove(other_family)
                 other_family = families[random.randint(0,len(families)-1)]
             else:
-                b = self.hidden_neurons.getRandomElement()
+                b = front_neurons[random.randint(0,len_front_hidden-1)]
 
         if other_family == 0:
             b = self.input_neurons.getRandomElement()
@@ -193,30 +240,38 @@ class Network(HashStructure):
         # forward hidden in order by x
         for i in range(len_hidden_neurons):
             hidden_neuron:Neuron = self.hidden_neurons.get(i)
-            hidden_neuron_connections:list = self.hidden_connections[hidden_neuron.innovation_number]
-            
             hidden_neuron_output:float = 0
-            for j in range(len(hidden_neuron_connections)):
-                c:Connection = hidden_neuron_connections[j]
-                if c.enabled:
-                    hidden_neuron_output += c.weight * c.neuronFrom.output
             
-            hidden_neuron.output = hidden_neuron.activationFunction(hidden_neuron_output)
+            if hidden_neuron.innovation_number in self.hidden_connections:
+                # otherwise:
+                # Hidden_neuron may be connected to output or nothing
+                # Exist connection from another hidden or input neuron before this
+                hidden_neuron_connections:list = self.hidden_connections[hidden_neuron.innovation_number]
+                
+                for j in range(len(hidden_neuron_connections)):
+                    c:Connection = hidden_neuron_connections[j]
+                    if c.enabled:
+                        hidden_neuron_output += c.weight * c.neuronFrom.output
+            
+            hidden_neuron.output = hidden_neuron.activationFunction(hidden_neuron.bias + hidden_neuron_output)
 
         # forward output layer
 
         output = [0 for _ in range(len_output_neurons)]
         for i in range(len_output_neurons):
             output_neuron:Neuron = self.output_neurons.get(i)
-            output_neuron_connections:list = self.output_connections.get(output_neuron.innovation_number,[])            
             output_neuron_output:float = 0
-            for j in range(len(output_neuron_connections)):
-                c:Connection = output_neuron_connections[j]
-                if c.enabled:
-                    output_neuron_output += c.weight * c.neuronFrom.output # todo: check bias
             
-            # print("output:",input, output_neuron_output)
-            output_neuron.output = output_neuron.activationFunction(output_neuron_output)
+            if output_neuron.innovation_number in self.output_connections:
+                # Exist connection from another hidden or input neuron before this
+                output_neuron_connections:list = self.output_connections[output_neuron.innovation_number]            
+                
+                for j in range(len(output_neuron_connections)):
+                    c:Connection = output_neuron_connections[j]
+                    if c.enabled:
+                        output_neuron_output += c.weight * c.neuronFrom.output # todo: check bias
+            
+            output_neuron.output = output_neuron.activationFunction(output_neuron.bias + output_neuron_output)
             output[i] = output_neuron.output
 
         return output
