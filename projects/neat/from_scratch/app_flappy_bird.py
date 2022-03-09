@@ -123,8 +123,8 @@ def fitnessFunction(neat: Neat):
             genomes_copy[index].score += 0.1
 
             input:list = [
-                1,
                 bird.position.y/Parameters.WINDOW_HEIGHT,
+                distance(bird.position.y, Parameters.WINDOW_HEIGHT)/Parameters.WINDOW_HEIGHT,
                 distance(bird.position.y, pipes[pipe_index].height)/Parameters.WINDOW_HEIGHT,
                 distance(bird.position.y, pipes[pipe_index].bottom)/Parameters.WINDOW_HEIGHT
             ]
@@ -182,49 +182,43 @@ def fitnessFunction(neat: Neat):
 
 
 if __name__ == '__main__':
-    input_size = 3 + 1 # + 1 bias
+    seed = 2
+    verbose_level = 5
+    
+    # replicate experiment
+    random.seed(seed)
+    input_size = 4
     output_size = 1
     max_population = 100 # 200
-    epochs = 200
+    epochs = 50
 
     configGenome:GenomeConfig = GenomeConfig(
-        probability_mutate_connections_weight = 0.8,
-        probability_perturb = 0.9,
-        probability_mutate_link = 0.05,
-        probability_mutate_node = 0.03,
-        probability_mutate_enable = 0.05,
-        probability_mutate_disable = 0.02,
-        std_weight_initialization = 1,
-        weight_step = 0.01,
+        probability_mutate_connection_add=0.5,
+        probability_mutate_connection_delete=0.5,
+        probability_mutate_node_add= 0.2,
+        probability_mutate_node_delete= 0.2,
         MAX_HIDDEN_NEURONS = 3
     )
 
     configSpecie:SpecieConfig = SpecieConfig(
-        STAGNATED_MAXIMUM = 40,
+        STAGNATED_MAXIMUM = 20,
         probability_crossover = 0.8,
         C1=1,
         C2=1,
-        C3=3,
+        C3=0.5,
         specie_threshold=3
     )
 
-        
+    
     neat:Neat = Neat(
         input_size,output_size,max_population,epochs,configGenome,
-        configSpecie,elitist_save=5, 
+        configSpecie,elitist_save=2, 
         activationFunctionHidden=ActivationFunction.relu,
-        activationFunctionOutput=ActivationFunction.sigmoid
+        activationFunctionOutput=ActivationFunction.sigmoid_steepened
     )
-    seed = 5
-    verbose_level = 10
-    # replicate experiment
-    random.seed(seed)
 
     for i in tqdm(range(epochs)):
         fitnessFunction(neat)
         neat.evolve(verbose_level=verbose_level-1,debug_step=1)
-        print()
-        
-            
-    best_genome = neat.getBestGenome()
-    print(best_genome)
+    
+    print(neat.genome_best)

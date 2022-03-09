@@ -50,7 +50,8 @@ class Specie:
         Specie.STATIC_COUNTER += 1
         self.id = Specie.STATIC_COUNTER
         
-        self.fitness_adjusted = 0    
+        self.fitness_adjusted = 0
+        self.prev_fitness = -math.inf  
 
         self.best_score:float = -math.inf
         self.best_score_genome:float = -math.inf
@@ -66,7 +67,7 @@ class Specie:
         self.score:float = 0
 
     def __str__(self)->str:
-        return f"Specie: {self.id}. LastImp: {self.generations_from_last_improve}. Alive: {self.generations_alive} . BestG: {self.best_score_genome}. Best avg: {self.best_score}. Pop.: {self.genomes.size()}"
+        return f"Specie:{self.id}. Last: {self.generations_from_last_improve}. BestG: {self.best_score_genome}. BestFit: {self.best_score} Fit: {round(self.score,2)} Adj: {round(self.fitness_adjusted,2)}. Pop.: {self.genomes.size()}. Nodes: {len(self.representative.neurons)}. Conns: {self.representative.connections.size()}"
         
 
     """
@@ -80,26 +81,7 @@ class Specie:
         """
         
        
-        distance_gene_node = 0.0
-        disjoint_nodes = 0
-        
-        for k2,n2 in g2.neurons.items():
-            if not k2 in g1.neurons:
-                disjoint_nodes += 1
-                
-        for k1,n1 in g1.neurons.items():
-            if not k1 in g2.neurons:
-                disjoint_nodes += 1
-                continue
-                
-            n2 = g2.neurons[k1]
-            # Homologous genes compute their own distance value.
-            distance_gene_node += n1.distance(n2, self.config.C3)
-
-        max_nodes = max(1,len(g1.neurons), len(g2.neurons))
-        distance_gene_node = (distance_gene_node +
-                            (self.config.C1 *
-                            disjoint_nodes)) / max_nodes
+       
                 
         len_connections_g1:int = g1.connections.size()
         len_connections_g2:int = g2.connections.size()
@@ -119,6 +101,27 @@ class Specie:
             # recalculate lens
             len_connections_g1:int = g1.connections.size()
             len_connections_g2:int = g2.connections.size()
+            
+            
+        distance_gene_node = 0.0
+        disjoint_nodes = 0
+        
+        for k2,n2 in g2.neurons.items():
+            if not k2 in g1.neurons:
+                disjoint_nodes += 1
+                
+        for k1,n1 in g1.neurons.items():
+            if not k1 in g2.neurons:
+                disjoint_nodes += 1
+                continue
+                
+            n2 = g2.neurons[k1]
+            # Homologous genes compute their own distance value.
+            distance_gene_node += n1.distance(n2, self.config.C3)
+
+        max_nodes = max(1,len(g1.neurons), len(g2.neurons))
+        distance_gene_node = (distance_gene_node +
+                            (self.config.C1 * disjoint_nodes))/max_nodes
 
 
         index_g1:int = 0
@@ -162,7 +165,7 @@ class Specie:
         
         factor_disjoint:float = ((self.config.C1 * disjoint)/N)
         factor_excess:float = ((self.config.C2 * excess)/N)
-        factor_weight:float = (self.config.C3 * weight_diff)
+        factor_weight:float = (weight_diff)
 
         distance_gene_connection = factor_disjoint + factor_excess + factor_weight
         return distance_gene_node + distance_gene_connection
@@ -185,12 +188,14 @@ class Specie:
         self.generations_alive += 1
 
         score_rounded:float = round(self.score, 2)
+        
         if score_rounded > self.best_score:
-            self.generations_from_last_improve = 0
             self.best_score = score_rounded
-            self.can_reproduce = True
+            self.generations_from_last_improve = 0
         else:
             self.generations_from_last_improve += 1
+            
+        self.prev_fitness = score_rounded
 
         
     def reset(self):
@@ -210,28 +215,6 @@ class Specie:
     def size(self)->int:
         return self.genomes.size()
     
-    @staticmethod
-    def breedInterSpecie(configGenome:GenomeConfig, specie1, specie2)->Genome:
-        # specie1 has better score
-        p:float = random.random()
-        len_genomes1:int = specie1.genomes.size()
-        len_genomes2:int = specie2.genomes.size()
-
-        if p < specie1.config.probability_crossover:  # TODO: refactor
-            input_size:int = specie1.representative.input_neurons.size()
-            output_size:int = specie1.representative.output_neurons.size()
-            genome_container:Genome = Genome.empty_genome(input_size,output_size,connect_input_output=False,config=configGenome)
-            # todo: we can control and improve if are the same?
-            g1:Genome = specie1.genomes.get(random.randint(0,len_genomes1-1))
-            g2:Genome = specie2.genomes.get(random.randint(0,len_genomes2-1))
-
-            if g1.score > g2.score:
-                return Genome.crossover(g1,g2,genome_container)
-            return Genome.crossover(g2,g1,genome_container)
-
-        return Genome.copy(specie1.genomes.get(random.randint(0,len_genomes1-1)))
-    
-
     def breed(self, configGenome:GenomeConfig)->Genome:
         
         p:float = random.random()
@@ -240,7 +223,7 @@ class Specie:
         if p < self.config.probability_crossover:
             input_size:int = self.representative.input_neurons.size()
             output_size:int = self.representative.output_neurons.size()
-            genome_container:Genome = Genome.empty_genome(input_size,output_size, configGenome.std_weight_initialization,connect_input_output=False,config=configGenome)
+            genome_container:Genome = Genome.empty_genome(input_size,output_size,connect_input_output=False,config=configGenome)
             # todo: we can control and improve if are the same?
             g1:Genome = self.genomes.get(random.randint(0,len_genomes-1))
             g2:Genome = self.genomes.get(random.randint(0,len_genomes-1))

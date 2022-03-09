@@ -1,4 +1,5 @@
 import random
+from tabnanny import verbose
 
 from sympy import S
 from .data_structures.HashSorted import HashSorted
@@ -66,7 +67,7 @@ class Neat:
 
         # creates dynamic genomes list
         for i in range(self.POPULATION):
-            genome:Genome = Genome.empty_genome(input_size, output_size, self.configGenome.std_weight_initialization, self.activationFunctionHidden, connect_input_output=True,config=self.configGenome)
+            genome:Genome = Genome.empty_genome(input_size, output_size, self.activationFunctionHidden, connect_input_output=True,config=self.configGenome)
             self.addGenomeAndSpeciate(genome)
 
     
@@ -84,25 +85,21 @@ class Neat:
         min_species_size = max(min_species_size, self.elitist_save)
         sizes_actual = Neat.compute_spawn(fitnesses_adjusted, sizes_previous, self.POPULATION, min_species_size)
         
-        
-
-        if verbose_level > 0 and (self.generation == 1 or self.generation == self.epochs or self.generation % debug_step == 0): 
-            self.printSpecies()
-
-            print(end="")
-            # print(sizes_previous, sizes_actual)
-
-        # Restore best genomes is the most important part to keep good scores in future!
-        
         self.generation += 1
         self.reducePopulation(SURVIVORS=0.2) # species[*].genomes already sorted to do this
-        self.populate(sizes_actual)
+        self.populate(sizes_actual, verbose_level=verbose_level-10)
+        
+        # show speciated population
+        if verbose_level > 0 and (self.generation == 1 or self.generation == self.epochs or self.generation % debug_step == 0): 
+            self.printSpecies(verbose_level-1)
+            print(end="")
+            # print(sizes_previous, sizes_actual)
         
     
         
 
         
-    def populate(self, sizes:list)->None:
+    def populate(self, sizes:list, verbose_level=0)->None:
         """
         Genomes of each specie have to be sorted before
         Genomes % only have to be alive before
@@ -129,7 +126,16 @@ class Neat:
             while size_remaining > 0:
                 size_remaining -= 1
                 child:Genome = specie.breed(self.configGenome)
-                child.mutate()
+                if verbose_level > 0:
+                    print("CHILD BREED: ", child)
+                history = child.mutate()
+                if verbose_level > 0:
+                    print("CHILD MUTAT: ", child)
+                    for key, value in history.items():
+                        s = history[key]["summary"]
+                        if s == "Nothing":
+                            continue
+                        print(key, s)
                 child.id_specie = -1  # TODO: ensure have different id
                 population_new.append(child)
                         
@@ -200,7 +206,7 @@ class Neat:
         i:int = self.species.size()-1
         while i >= 0:
             if self.species.get(i).generations_from_last_improve > self.species.get(i).config.STAGNATED_MAXIMUM:
-                print(f"REMOVED SPECIE {self.species.get(i).id}")
+                # print(f"REMOVED SPECIE {self.species.get(i).id}")
                 self.removeSpecie(i)
                 removed = True          
             i -= 1
@@ -230,10 +236,10 @@ class Neat:
         candidates = []
         for i in range(len(self.species.data)):
             specie:Specie = self.species.data[i]
-            similarity:float = specie.distance(genome, specie.representative)
-            if similarity < specie.config.specie_threshold:
+            distance_similarity:float = specie.distance(genome, specie.representative)
+            if distance_similarity < specie.config.specie_threshold:
                 # it is part of the specie
-                candidates.append((similarity,specie))
+                candidates.append((distance_similarity,specie))
         
         if len(candidates) > 0:
             _, specie = min(candidates, key=lambda x: x[0])
@@ -321,13 +327,14 @@ class Neat:
                 best_genome = genome
         return best_genome
 
-    def printSpecies(self)->None:
+    def printSpecies(self,verbose_level=0)->None:
         print("##########################################")
         for i in range(len(self.species.data)):
             s:Specie = self.species.data[i]
             print(s)
-            
-        # print("Best genome", self.genome_best)
+        
+        if verbose_level > 0:
+            print("Best genome", self.genome_best)
         print("##########################################")
 
     @staticmethod

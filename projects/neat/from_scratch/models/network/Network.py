@@ -251,9 +251,9 @@ class Network(HashStructure):
                 for j in range(len(hidden_neuron_connections)):
                     c:Connection = hidden_neuron_connections[j]
                     if c.enabled:
-                        hidden_neuron_output += c.weight * c.neuronFrom.output
+                        hidden_neuron_output += c.weight.value * c.neuronFrom.output
             
-            hidden_neuron.output = hidden_neuron.activationFunction(hidden_neuron.bias + hidden_neuron_output)
+            hidden_neuron.output = hidden_neuron.activationFunction(hidden_neuron.bias.value + hidden_neuron.response.value * hidden_neuron_output)
 
         # forward output layer
 
@@ -269,9 +269,9 @@ class Network(HashStructure):
                 for j in range(len(output_neuron_connections)):
                     c:Connection = output_neuron_connections[j]
                     if c.enabled:
-                        output_neuron_output += c.weight * c.neuronFrom.output # todo: check bias
+                        output_neuron_output += c.weight.value * c.neuronFrom.output # todo: check bias
             
-            output_neuron.output = output_neuron.activationFunction(output_neuron.bias + output_neuron_output)
+            output_neuron.output = output_neuron.activationFunction(output_neuron.bias.value + output_neuron.response.value * output_neuron_output)
             output[i] = output_neuron.output
 
         return output
