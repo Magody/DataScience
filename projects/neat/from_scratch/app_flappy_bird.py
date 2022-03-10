@@ -14,6 +14,7 @@ from resources.flappy_bird.models.Pipe import Pipe
 from resources.flappy_bird.models.Base import Base
 from resources.flappy_bird.Parameters import Parameters
 
+clear = lambda: os.system('clear')
 
 
 def getPygameImageFromPath(image_name):
@@ -22,10 +23,8 @@ def getPygameImageFromPath(image_name):
     print(path_img)
     return pygame.transform.scale2x(pygame.image.load(path_img))
 
-
 def getPygameMask(image):
     return pygame.mask.from_surface(image)
-
 
 def flipImage(image, xbool, ybool):
     return pygame.transform.flip(image, xbool, ybool)
@@ -96,6 +95,8 @@ def fitnessFunction(neat: Neat):
 
     game_running = True
 
+    sum_output1 = 0
+    sum_output2 = 0
     while game_running:
 
 
@@ -114,24 +115,32 @@ def fitnessFunction(neat: Neat):
 
         # get the next pipe in front
         pipe_index = findPipeToAnalize(birds, pipes)
-
         # action for the frame
+        assert len(birds) == len(genomes_copy)
         for index, bird in enumerate(birds):
             # gravity to the bird 
             bird.move()
             # each frame alive means a reward of 0.1
             genomes_copy[index].score += 0.1
 
+            div_normalization = 1  # Parameters.WINDOW_HEIGHT
             input:list = [
-                bird.position.y/Parameters.WINDOW_HEIGHT,
-                distance(bird.position.y, Parameters.WINDOW_HEIGHT)/Parameters.WINDOW_HEIGHT,
-                distance(bird.position.y, pipes[pipe_index].height)/Parameters.WINDOW_HEIGHT,
-                distance(bird.position.y, pipes[pipe_index].bottom)/Parameters.WINDOW_HEIGHT
+                bird.position.y/div_normalization,
+                distance(bird.position.y, Parameters.WINDOW_HEIGHT)/div_normalization,
+                distance(bird.position.y, pipes[pipe_index].height)/div_normalization,
+                distance(bird.position.y, pipes[pipe_index].bottom)/div_normalization
             ]
-            output:list = neat.genomes[index].forward(input)
-
+            output:list = genomes_copy[index].forward(input)
+            
+            
+                
+                
             if output[0] > 0.5:
+                sum_output1 += 1/len(birds)
                 bird.jump(-9)
+            else:
+                sum_output2 += 1/len(birds)
+            
 
         add_pipe = False
         pending_remove = []
@@ -141,6 +150,8 @@ def fitnessFunction(neat: Neat):
                 if existCollition(bird, pipe):
                     genomes_copy[index].score -= 1
                     # dead
+                    if len(birds) == 1:
+                        print(genomes_copy[index])
                     birds.pop(index)
                     genomes_copy.pop(index)
 
@@ -169,6 +180,8 @@ def fitnessFunction(neat: Neat):
         for index, bird in enumerate(birds):
             if bird.isOutsideScreen(Parameters.WINDOW_HEIGHT, Parameters.BASE_HEIGHT):
                 # dead but without penalization
+                if len(birds) == 1:
+                    print(genomes_copy[index])
                 birds.pop(index)
                 genomes_copy.pop(index)
 
@@ -179,18 +192,22 @@ def fitnessFunction(neat: Neat):
         pygame.display.update()
 
     
+    total = sum_output1 + sum_output2
+    # print(sum_output1/total, sum_output2/total)
+    # print()
 
 
 if __name__ == '__main__':
-    seed = 2
+    clear()
+    # seed = 2
+    # replicate experiment
+    # random.seed(seed)
     verbose_level = 5
     
-    # replicate experiment
-    random.seed(seed)
     input_size = 4
     output_size = 1
-    max_population = 100 # 200
-    epochs = 50
+    max_population = 200
+    epochs = 100
 
     configGenome:GenomeConfig = GenomeConfig(
         probability_mutate_connection_add=0.5,
@@ -213,8 +230,8 @@ if __name__ == '__main__':
     neat:Neat = Neat(
         input_size,output_size,max_population,epochs,configGenome,
         configSpecie,elitist_save=2, 
-        activationFunctionHidden=ActivationFunction.relu,
-        activationFunctionOutput=ActivationFunction.sigmoid_steepened
+        activationFunctionHidden=ActivationFunction.tanh,
+        activationFunctionOutput=ActivationFunction.tanh
     )
 
     for i in tqdm(range(epochs)):

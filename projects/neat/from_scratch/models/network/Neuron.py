@@ -32,7 +32,7 @@ class Neuron(Gene):
         self.y = y
         self.output:float = 0
         # TODO: parametice and optimice initialization
-        self.bias = GeneAttributeFloat(replace_rate=0.1, mutate_rate=0.7, min_value=-2, max_value=2)
+        self.bias = GeneAttributeFloat(replace_rate=0.1, mutate_rate=0.7, min_value=-30, max_value=30)
         # initial value is 1
         self.response = GeneAttributeFloat(init_mean=1, init_stdev=0, replace_rate=0, mutate_rate=0, mutate_power=0, min_value=-30, max_value=30)
 
@@ -40,6 +40,9 @@ class Neuron(Gene):
 
     def mutate(self):
         history = {"summary": ""}
+        if self.getNeuronType() == EnumConnectionTypes.TYPE_INPUT:
+            return history
+            
         history["summary"] += f"BIAS:{self.bias.mutate()['summary']}"
         s = self.response.mutate()['summary']
         if s != "Nothing":
@@ -89,7 +92,10 @@ class Neuron(Gene):
         elif self.x == 0.9:
             type_neuron = "O"
             
-        return f"{wc('blue', str(self.innovation_number))}{wc('cyan', '[' + str(round(self.bias.value,1)) + ']')}{type_neuron}"
+        string_bias = ""
+        if type_neuron != "I":
+            string_bias = wc('cyan', '[' + str(round(self.bias.value,1)) + ']')
+        return f"{wc('blue', str(self.innovation_number))}{string_bias}{type_neuron}"
 
     def hashCode(self):
         return self.innovation_number

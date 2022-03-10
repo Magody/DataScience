@@ -21,7 +21,7 @@ class Connection(Gene):
     def __init__(self,from_neuron:Neuron,to_neuron:Neuron):
         self.neuronFrom = from_neuron
         self.neuronTo = to_neuron
-        self.weight = GeneAttributeFloat(min_value=-2,max_value=2)
+        self.weight = GeneAttributeFloat(min_value=-30,max_value=30)
         self.enabled = GeneAttributeBool(mutate_rate=0.01, value=True, default="True", rate_to_false_add=0, rate_to_true_add=0)
         self.replace_index:int = 0
         

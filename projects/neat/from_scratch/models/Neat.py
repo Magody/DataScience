@@ -1,5 +1,3 @@
-import random
-from tabnanny import verbose
 
 from sympy import S
 from .data_structures.HashSorted import HashSorted
@@ -8,6 +6,7 @@ from .network.Neuron import *
 from .evolution.Specie import Specie, SpecieConfig
 from .network.Activation import ActivationFunction
 from .network.Connection import *
+from tqdm import tqdm
 
 
 class Neat:
@@ -71,7 +70,20 @@ class Neat:
             self.addGenomeAndSpeciate(genome)
 
     
-    
+    def run(self, eval_function, FITNESS_THRESHOLD=math.inf, verbose_level=0):
+        for i in tqdm(range(self.epochs)):
+        
+        
+            # we can collect scores by frame, in this case we can directly collect from functions
+            for j in range(len(self.genomes)):
+                genome:Genome = self.genomes[j]
+                genome.setScore(eval_function(genome))
+            self.evolve(verbose_level=verbose_level-1)
+            
+            if self.genome_best.score > FITNESS_THRESHOLD:
+                break
+            
+        return self.genome_best
                
     def evolve(self,verbose_level=1,debug_step=1)->None:
                 
@@ -81,8 +93,7 @@ class Neat:
         # self.removeSpeciesWeak()
         
         sizes_previous = [len(s.genomes.data) for s in self.species.data]
-        min_species_size = 2
-        min_species_size = max(min_species_size, self.elitist_save)
+        min_species_size = max(2, self.elitist_save)
         sizes_actual = Neat.compute_spawn(fitnesses_adjusted, sizes_previous, self.POPULATION, min_species_size)
         
         self.generation += 1

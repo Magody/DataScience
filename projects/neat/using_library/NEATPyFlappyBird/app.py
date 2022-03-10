@@ -91,11 +91,13 @@ def fitnessFunction(genomes, config):
 
     game_running = True
 
+    sum_output1 = 0
+    sum_output2 = 0
     while game_running:
 
 
         # PARA AUMENTAR LA VELOCIDAD COMENTAR ESTO
-        clock.tick(30)  # 30 ticks every second
+        # clock.tick(30)  # 30 ticks every second
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -126,8 +128,13 @@ def fitnessFunction(genomes, config):
                 distance(bird.position.y, pipes[pipe_index].bottom)
             ))
 
-            if output[0] > 0.5:  # we use a tanh activation function so result will be between -1 and 1. if over 0.5 jump
+            if output[0] > 0.5:
+                sum_output1 += 1/len(birds)
                 bird.jump(-10.1)
+            else:
+                sum_output2 += 1/len(birds)
+            
+
 
         add_pipe = False
         pending_remove = []
@@ -137,6 +144,8 @@ def fitnessFunction(genomes, config):
                 if existCollition(bird, pipe):
                     genomes_copy[index].fitness -= 1
                     # dead
+                    if len(birds) == 1:
+                        print(genomes_copy[index])
                     birds.pop(index)  
                     feed_forward_networks.pop(index)
                     genomes_copy.pop(index)
@@ -166,6 +175,8 @@ def fitnessFunction(genomes, config):
         for index, bird in enumerate(birds):
             if bird.isOutsideScreen(Parameters.WINDOW_HEIGHT, Parameters.BASE_HEIGHT):
                 # dead but without penalization
+                if len(birds) == 1:
+                    print(genomes_copy[index])
                 birds.pop(index)
                 feed_forward_networks.pop(index)
                 genomes_copy.pop(index)
@@ -176,7 +187,9 @@ def fitnessFunction(genomes, config):
         drawer.draw_window(birds, pipes, base, score, BACKGROUND_PYGAME_IMAGE[0], GENERATION)
         pygame.display.update()
 
-    
+    total = sum_output1 + sum_output2
+    print(sum_output1/total, sum_output2/total)
+    print()
 
 
 if __name__ == '__main__':
@@ -191,7 +204,7 @@ if __name__ == '__main__':
                                 configuration_neat_path)
 
     population = neat.Population(config)
-    number_generations = 200
+    number_generations = 20
 
     # Add a stdout reporter to show progress in the terminal.
     population.add_reporter(neat.StdOutReporter(True))

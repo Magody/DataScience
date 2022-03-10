@@ -53,7 +53,8 @@ class GeneAttributeFloat(GeneAttributeBase):
     def init_value(self):
 
         if ('gauss' in self.init_type) or ('normal' in self.init_type):
-            self.value = self.clamp(gauss(self.init_mean, self.init_stdev))
+            g = gauss(self.init_mean, self.init_stdev)
+            self.value = self.clamp(g)
 
         if 'uniform' in self.init_type:
             min_value = max(self.min_value, (self.init_mean - (2 * self.init_stdev)))

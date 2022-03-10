@@ -153,12 +153,12 @@ class Genome(Network):
             # either add or delete
             if random.random() < self.mutation_rates["node_add"]:
                 history_mutation["node_add"] = self.mutateGenomeNodeAdd()
-            elif random.random() < self.mutation_rates["node_delete"]:
+            if random.random() < self.mutation_rates["node_delete"]:
                 history_mutation["node_delete"] = self.mutateGenomeNodeDelete()
                 
             if random.random() < self.mutation_rates["connection_add"]:
                 history_mutation["connection_add"] = self.mutateGenomeConnectionAdd()
-            elif random.random() < self.mutation_rates["connection_delete"]:
+            if random.random() < self.mutation_rates["connection_delete"]:
                 history_mutation["connection_delete"] = self.mutateGenomeConnectionDelete()
 
         history_mutation["nodes"] = self.mutateNeurons()

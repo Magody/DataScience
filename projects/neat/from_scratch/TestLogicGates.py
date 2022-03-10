@@ -11,6 +11,34 @@ clear = lambda: os.system('clear')
 
 
 class TestLogicGates:
+    
+    def scoreOR(self,genome:Genome)->float:
+        # The resulting number was squared to give proportionally more fitness the closer a network was to a solution.
+                
+        fitness:float = 4.0
+        
+        xor_inputs = [(0.0, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0)]
+        xor_outputs = [   (0.0,),     (1.0,),     (1.0,),     (1.0,)]
+
+        for xi, xo in zip(xor_inputs, xor_outputs):
+            output = genome.forward(xi)
+            fitness -= (output[0] - xo[0]) ** 2
+            
+        return fitness * fitness
+    
+    def scoreAND(self,genome:Genome)->float:
+        # The resulting number was squared to give proportionally more fitness the closer a network was to a solution.
+                
+        fitness:float = 4.0
+        
+        xor_inputs = [(0.0, 0.0), (0.0, 1.0), (1.0, 0.0), (1.0, 1.0)]
+        xor_outputs = [   (0.0,),     (0.0,),     (0.0,),     (1.0,)]
+
+        for xi, xo in zip(xor_inputs, xor_outputs):
+            output = genome.forward(xi)
+            fitness -= (output[0] - xo[0]) ** 2
+            
+        return fitness * fitness
         
     def scoreXOR(self,genome:Genome)->float:
         # The resulting number was squared to give proportionally more fitness the closer a network was to a solution.
@@ -164,7 +192,7 @@ class TestLogicGates:
         return best_genome
 
     
-        
+ 
 clear()
 test = TestLogicGates()
-test.executeSanityCheck(0,20,1)
+test.executeSanityCheck(0,0,5)
