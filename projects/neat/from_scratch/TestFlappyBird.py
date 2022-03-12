@@ -13,6 +13,8 @@ from resources.flappy_bird.models.Bird import Bird
 from resources.flappy_bird.models.Pipe import Pipe
 from resources.flappy_bird.models.Base import Base
 from resources.flappy_bird.Parameters import Parameters
+from models.network.Neuron import ConfigNeuron
+from models.network.Connection import ConfigConnection
 
 clear = lambda: os.system('clear')
 
@@ -123,7 +125,7 @@ def fitnessFunction(neat: Neat):
             # each frame alive means a reward of 0.1
             genomes_copy[index].score += 0.1
 
-            div_normalization = 1  # Parameters.WINDOW_HEIGHT
+            div_normalization = 1  # 1 Parameters.WINDOW_HEIGHT
             input:list = [
                 bird.position.y/div_normalization,
                 distance(bird.position.y, Parameters.WINDOW_HEIGHT)/div_normalization,
@@ -214,7 +216,9 @@ if __name__ == '__main__':
         probability_mutate_connection_delete=0.5,
         probability_mutate_node_add= 0.2,
         probability_mutate_node_delete= 0.2,
-        MAX_HIDDEN_NEURONS = 3
+        MAX_HIDDEN_NEURONS = 20,
+        configNeuron=ConfigNeuron(bias_min_value=-30, bias_max_value=30),
+        configConnection=ConfigConnection(weight_min_value=-30, weight_max_value=30)
     )
 
     configSpecie:SpecieConfig = SpecieConfig(
@@ -231,7 +235,7 @@ if __name__ == '__main__':
         input_size,output_size,max_population,epochs,configGenome,
         configSpecie,elitist_save=2, 
         activationFunctionHidden=ActivationFunction.tanh,
-        activationFunctionOutput=ActivationFunction.tanh
+        activationFunctionOutput=ActivationFunction.sigmoid
     )
 
     for i in tqdm(range(epochs)):
