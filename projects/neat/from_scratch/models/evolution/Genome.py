@@ -15,7 +15,10 @@ class GenomeConfig:
         probability_mutate_node_add:float = 0.2,
         probability_mutate_node_delete:float = 0.2,
         MAX_HIDDEN_NEURONS:int = 1,
-        activationFunctionHidden = ActivationFunction.sigmoid_steepened
+        activationFunctionHidden = ActivationFunction.sigmoid_steepened,
+        configNeuron: ConfigNeuron = None,
+        configConnection: ConfigConnection = None
+        
     ):
         self.probability_mutate_connection_add:float = probability_mutate_connection_add
         self.probability_mutate_connection_delete:float = probability_mutate_connection_delete
@@ -23,6 +26,8 @@ class GenomeConfig:
         self.probability_mutate_node_delete:float = probability_mutate_node_delete
         self.MAX_HIDDEN_NEURONS:int = MAX_HIDDEN_NEURONS
         self.activationFunctionHidden = activationFunctionHidden
+        self.configNeuron = configNeuron
+        self.configConnection = configConnection;
 
 
 
@@ -76,14 +81,13 @@ class Genome(Network):
             # initial connection
             for input_neuron in genome.input_neurons.data:
                 for output_neuron in genome.output_neurons.data:
-                    genome.insertConnection(Connection.getConnection(input_neuron,output_neuron))
+                    genome.insertConnection(Connection.getConnection(input_neuron,output_neuron, config.configConnection))
 
         return genome
 
     @staticmethod
     def copy(genome, copy_specie=True):
 
-        # todo: check copy method is correct
         genome_copy:Genome = Genome(
             [],
             [],
@@ -178,11 +182,11 @@ class Genome(Network):
 
         con:Connection = None
         if a.x < b.x:
-            con = Connection(a,b)
+            con = Connection(a,b, self.config.configConnection)
         else:
-            con = Connection(b,a)
+            con = Connection(b,a, self.config.configConnection)
 
-        con = Connection.getConnection(con.neuronFrom, con.neuronTo)
+        con = Connection.getConnection(con.neuronFrom, con.neuronTo, self.config.configConnection)
 
         if self.existConnection(con):
             if not con.enabled.value:
@@ -208,12 +212,14 @@ class Genome(Network):
     def mutateGenomeNodeAdd(self):
         history = {"summary": "Nothing"}
         
+        if self.hidden_neurons.size() > self.config.MAX_HIDDEN_NEURONS:
+            return history
+        
         # add hidden node in EXISTING connection
         con:Connection = self.getRandomConnection()
         
         if con is None:
             # there is no connections yet
-            # TODO: add to config a parameter to check if we have to modify structural or not
             history = self.mutateGenomeConnectionAdd()
             return history
         
@@ -222,7 +228,7 @@ class Genome(Network):
         to_neuron:Neuron = con.neuronTo
 
         # always split the link into two nodes
-        replace_index, key = Connection.getReplaceIndex(from_neuron,to_neuron)
+        replace_index, key = Connection.getReplaceIndex(from_neuron,to_neuron,self.config.configConnection)
 
         middle:Neuron = None
 
@@ -241,14 +247,14 @@ class Genome(Network):
             x = (from_neuron.x + to_neuron.x)/2
             y = (from_neuron.y + to_neuron.y)/2 + (random.random() * 0.1 - 0.05)
             innovation_number:int = len(Neuron.map_neuron_innovation_number)+1
-            middle:Neuron = Neuron.getNeuronNew(x,y,innovation_number,self.activationFunctionHidden)
-            Connection.setReplaceIndex(from_neuron,to_neuron,middle.innovation_number)
+            middle:Neuron = Neuron.getNeuronNew(x,y,innovation_number,self.activationFunctionHidden, self.config.configNeuron)
+            Connection.setReplaceIndex(from_neuron,to_neuron,middle.innovation_number,self.config.configConnection)
             
             history["summary"] = f"Add node:New node {middle}"
         
 
-        con1:Connection = Connection.getConnection(from_neuron,middle)
-        con2:Connection = Connection.getConnection(middle,to_neuron)
+        con1:Connection = Connection.getConnection(from_neuron,middle, self.config.configConnection)
+        con2:Connection = Connection.getConnection(middle,to_neuron, self.config.configConnection)
 
         # before link: set weight to 1
         con1.enabled.value = True
@@ -342,8 +348,7 @@ class Genome(Network):
         """ 
         g1 has to be the genome with highest score.
         """
-        # todo: # check that crossover is well done, pass by reference works and genome new modify only needed
-
+        
         # genome is a "empty" base genome with existing or no nodes
 
         index_g1 = 0

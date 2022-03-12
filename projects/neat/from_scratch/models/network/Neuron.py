@@ -6,6 +6,79 @@ class EnumConnectionTypes:
     TYPE_INPUT = 0
     TYPE_HIDDEN = 1
     TYPE_OUTPUT = 2
+    
+class ConfigNeuron:
+           
+    def __init__(
+        self,
+        bias_mutate_rate = 0.7,
+        bias_value = None,
+        bias_init_mean = 0,
+        bias_init_stdev = 1,
+        bias_init_type = "gaussian",
+        bias_replace_rate = 0.1,
+        bias_mutate_power = 0.5,
+        bias_min_value = -2,
+        bias_max_value = 2,
+        response_mutate_rate = 0.0,
+        response_value = None,
+        # initial value is 1
+        response_init_mean = 1,
+        response_init_stdev = 0,
+        response_init_type = "gaussian",
+        response_replace_rate = 0.0,
+        response_mutate_power = 0.0,
+        response_min_value = -1,
+        response_max_value = 1
+        
+    ):
+        self.attribute_reference_bias = GeneAttributeFloat(
+            bias_mutate_rate, 
+            bias_value, 
+            bias_init_mean, 
+            bias_init_stdev, 
+            bias_init_type, 
+            bias_replace_rate, 
+            bias_mutate_power, 
+            bias_min_value, 
+            bias_max_value
+        )
+        
+        self.attribute_reference_response = GeneAttributeFloat(
+            response_mutate_rate, 
+            response_value, 
+            response_init_mean, 
+            response_init_stdev, 
+            response_init_type, 
+            response_replace_rate, 
+            response_mutate_power, 
+            response_min_value, 
+            response_max_value
+        )
+        
+    def copy(self):
+        return ConfigNeuron(
+            self.attribute_reference_bias.mutate_rate, 
+            self.attribute_reference_bias.value, 
+            self.attribute_reference_bias.init_mean, 
+            self.attribute_reference_bias.init_stdev, 
+            self.attribute_reference_bias.init_type, 
+            self.attribute_reference_bias.replace_rate, 
+            self.attribute_reference_bias.mutate_power, 
+            self.attribute_reference_bias.min_value, 
+            self.attribute_reference_bias.max_value,
+            self.attribute_reference_response.mutate_rate, 
+            self.attribute_reference_response.value, 
+            self.attribute_reference_response.init_mean, 
+            self.attribute_reference_response.init_stdev, 
+            self.attribute_reference_response.init_type, 
+            self.attribute_reference_response.replace_rate, 
+            self.attribute_reference_response.mutate_power, 
+            self.attribute_reference_response.min_value, 
+            self.attribute_reference_response.max_value
+        )
+        
+        
 
 class Neuron(Gene):
     ### GLOBAL/STATIC VARIABLES
@@ -21,20 +94,23 @@ class Neuron(Gene):
     x:float = 0
     # y: just a helper to determine its position in network
     y:float = 0
-
+    
+    
     activationFunction = None # type function
     output:float = 0
 
-    def __init__(self,x:float,y:float,innovation_number:int,activationFunction):
+    # private
+    _configNeuron = None
+    
+    def __init__(self,x:float,y:float,innovation_number:int,activationFunction, configNeuron:ConfigNeuron):
         super().__init__(innovation_number)
         self.x = x
         self.key = x
         self.y = y
         self.output:float = 0
-        # TODO: parametice and optimice initialization
-        self.bias = GeneAttributeFloat(replace_rate=0.1, mutate_rate=0.7, min_value=-30, max_value=30)
-        # initial value is 1
-        self.response = GeneAttributeFloat(init_mean=1, init_stdev=0, replace_rate=0, mutate_rate=0, mutate_power=0, min_value=-30, max_value=30)
+        self.bias = configNeuron.attribute_reference_bias.copy()
+        self.response = configNeuron.attribute_reference_response.copy()
+        self._configNeuron = configNeuron.copy()
 
         self.activationFunction = activationFunction
 
@@ -57,7 +133,7 @@ class Neuron(Gene):
     
     @staticmethod
     def copy(neuron):
-        neuron_copy = Neuron(neuron.x,neuron.y,neuron.innovation_number,neuron.activationFunction)
+        neuron_copy = Neuron(neuron.x,neuron.y,neuron.innovation_number,neuron.activationFunction, neuron._configNeuron)
         neuron_copy.output = neuron.output
         neuron_copy.bias = neuron.bias.copy()
         neuron_copy.response = neuron.response.copy()
@@ -101,11 +177,11 @@ class Neuron(Gene):
         return self.innovation_number
 
     @staticmethod
-    def getNeuronNew(x:float,y:float,innovation_number:int,activation_function,exist:bool=False):
-        n:Neuron = Neuron(x,y,innovation_number,activation_function)
+    def getNeuronNew(x:float,y:float,innovation_number:int,activation_function, configNeuron,exist:bool=False):
+        n:Neuron = Neuron(x,y,innovation_number,activation_function, configNeuron)
         if not exist:
             # no exist, so add it to storage
-            Neuron.map_neuron_innovation_number[innovation_number] = (n.x,n.y,n.activationFunction)
+            Neuron.map_neuron_innovation_number[innovation_number] = (n.x,n.y,n.activationFunction,n._configNeuron)
         return n
 
     @staticmethod
@@ -123,7 +199,8 @@ class Neuron(Gene):
             x = sample[0]
             y = sample[1]
             activation_function = sample[2]
-            return Neuron.getNeuronNew(x,y,innovation_number,activation_function,True)
+            configNeuron = sample[3]
+            return Neuron.getNeuronNew(x,y,innovation_number,activation_function,configNeuron,True)
 
         else:
             raise Exception("Unknown neuron: Use getNeuronNew instead")

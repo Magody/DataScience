@@ -8,6 +8,8 @@ from models.evolution.Specie import SpecieConfig
 from models.evolution.Genome import GenomeConfig
 from models.network.Activation import ActivationFunction
 import os
+from models.network.Connection import ConfigConnection
+from models.network.Neuron import ConfigNeuron
 
 
 class CartPole(object):
@@ -161,7 +163,9 @@ def run():
         probability_mutate_connection_delete=0.5,
         probability_mutate_node_add= 0.2,
         probability_mutate_node_delete= 0.2,
-        MAX_HIDDEN_NEURONS = 3
+        MAX_HIDDEN_NEURONS = 3,
+        configNeuron=ConfigNeuron(bias_min_value=-30, bias_max_value=30),
+        configConnection=ConfigConnection(weight_min_value=-30, weight_max_value=30)       
     )
 
     configSpecie:SpecieConfig = SpecieConfig(
@@ -174,8 +178,8 @@ def run():
     )
     neat:Neat = Neat(
         input_size,output_size,max_population,epochs,configGenome,configSpecie,elitist_save=2,
-        activationFunctionHidden=ActivationFunction.relu,
-        activationFunctionOutput=ActivationFunction.sigmoid_steepened
+        activationFunctionHidden=ActivationFunction.tanh,
+        activationFunctionOutput=ActivationFunction.sigmoid
     )
     
     genome_best = neat.run(eval_genome, FITNESS_THRESHOLD, verbose_level-1)

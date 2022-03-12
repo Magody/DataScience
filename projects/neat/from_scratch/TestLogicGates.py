@@ -1,4 +1,6 @@
 from models.evolution.Genome import Genome
+from models.network.Neuron import ConfigNeuron
+from models.network.Connection import ConfigConnection
 from models.Neat import Neat
 from tqdm import tqdm
 import random
@@ -7,6 +9,9 @@ from models.evolution.Specie import SpecieConfig
 from models.evolution.Genome import GenomeConfig
 from models.network.Activation import ActivationFunction
 import os
+
+from models.network.Neuron import ConfigNeuron
+from models.network.Connection import ConfigConnection
 clear = lambda: os.system('clear')
 
 
@@ -65,7 +70,9 @@ class TestLogicGates:
             probability_mutate_connection_delete=0.5,
             probability_mutate_node_add= 0.2,
             probability_mutate_node_delete= 0.2,
-            MAX_HIDDEN_NEURONS = 3
+            MAX_HIDDEN_NEURONS = 10,
+            configNeuron=ConfigNeuron(bias_min_value=-2, bias_max_value=2),
+            configConnection=ConfigConnection(weight_min_value=-5, weight_max_value=5)
         )
 
         configSpecie:SpecieConfig = SpecieConfig(
@@ -150,11 +157,9 @@ class TestLogicGates:
                 else:
                     raise Exception(f"Unknown gate '{gate}'")
                 
-                if genome.score > 15.9:
+                if genome.score > 15.8:
                     completed = True
                     break
-                # TODO: get the best genome while running
-                # TODO: check for fitness max, criterion. Reached
             if completed:
                 break
             
@@ -192,7 +197,7 @@ class TestLogicGates:
         return best_genome
 
     
- 
+
 clear()
 test = TestLogicGates()
 test.executeSanityCheck(0,0,5)

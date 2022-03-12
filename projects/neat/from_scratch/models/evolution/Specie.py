@@ -79,10 +79,7 @@ class Specie:
         Returns the genetic distance between this genome and the other. This distance value
         is used to compute genome compatibility for speciation.
         """
-        
-       
-       
-                
+            
         len_connections_g1:int = g1.connections.size()
         len_connections_g2:int = g2.connections.size()
 

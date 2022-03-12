@@ -88,10 +88,7 @@ class ChatbotRetrieval:
             
             return ChatbotRetrieval(model_name, name, context, state, type, intents, nn_config=nn_config)
 
-        
-        
-
-    # TODO: CHANGE MIN_COUNT TO 2, when we have enought data
+    
     def generateWordsAndClasses(self, MIN_COUNT_WORDS=1, verbose=0):
 
         for tag, intent in self.intents.items():

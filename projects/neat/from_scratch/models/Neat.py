@@ -56,13 +56,13 @@ class Neat:
         for i in range(input_size):
             y = (i+1)/float(input_size+1)
             innovation_number:int = i+1
-            Neuron.getNeuronNew(0.1,y,innovation_number, self.activationFunctionHidden)
+            Neuron.getNeuronNew(0.1,y,innovation_number, self.activationFunctionHidden, self.configGenome.configNeuron)
 
         # creates base output neurons and save them as reference
         for i in range(output_size):
             y = (i+1)/float(output_size+1)
             innovation_number:int = input_size + (i+1)
-            Neuron.getNeuronNew(0.9,y,innovation_number,self.activationFunctionOutput)
+            Neuron.getNeuronNew(0.9,y,innovation_number,self.activationFunctionOutput, self.configGenome.configNeuron)
 
         # creates dynamic genomes list
         for i in range(self.POPULATION):
@@ -84,11 +84,18 @@ class Neat:
                 break
             
         return self.genome_best
+    
+    def isExtinction(self):
+        return self.species.size() == 0
                
     def evolve(self,verbose_level=1,debug_step=1)->None:
                 
         self.removeStagnantSpecies()
-        # TODO: check species extinction
+        if self.isExtinction():
+            print("EXTINCTION, RESET")            
+            self.reset(self.input_size, self.output_size, self.POPULATION, self.epochs)
+            return
+        
         fitnesses_adjusted = self.calculateFitnessesSpecies()
         # self.removeSpeciesWeak()
         
@@ -147,7 +154,7 @@ class Neat:
                         if s == "Nothing":
                             continue
                         print(key, s)
-                child.id_specie = -1  # TODO: ensure have different id
+                child.id_specie = -1
                 population_new.append(child)
                         
          
@@ -268,7 +275,6 @@ class Neat:
         # evaluate scores for each specie
         for i in range(len(self.species.data)):
             s:Specie = self.species.data[i]
-            # TODO: optimice reducing population here directly and using that adjusted fitness
             s.genomes.data.sort(key=lambda genome: genome.score)
             
             
