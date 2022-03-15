@@ -229,7 +229,6 @@ if __name__ == '__main__':
         C3=0.5,
         specie_threshold=3
     )
-
     
     neat:Neat = Neat(
         input_size,output_size,max_population,epochs,configGenome,
