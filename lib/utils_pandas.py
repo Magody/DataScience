@@ -68,3 +68,38 @@ def custom_replace(df, column_name: str, method: str, vars: list):
     replaced[column_name].replace(map, inplace=True)
     return replaced
     
+    
+def getDeepKeyValues(tree:dict, prefix:str, column_data:dict)->None:
+    """Recursive solution to convert a JSON document into play columns.
+    Depending on jerarchy. IMPORTANT: Thisneeds an empty dict
+    column_data, reusable for multiple calls. Should be passed by reference
+
+    Args:
+        tree (dict): the root document part
+        prefix (str): prefix to append recursively
+    Global:
+        column_data (dict): traceback of columns generated
+    """
+    
+    for key,value in tree.items():
+        prefix_new = f"{prefix}"
+        if prefix != "":
+            prefix_new += "_"
+        key_new = f"{prefix_new}{key}"
+        
+        if type(value) is dict:
+            getDeepKeyValues(value, key_new, column_data)
+        # elif type(value) is list:
+        #    for val in value:
+        #        getDeepKeyValues(val, key_new)    
+        else:
+            if key_new not in column_data:
+                column_data[key_new] = []
+            column_data[key_new].append(value)
+    
+def pandasLimitsDisable(disable:bool=True):
+    if disable:
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+    else:
+        pd.reset_option('^display.', silent=True)
