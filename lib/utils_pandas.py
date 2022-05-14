@@ -1,3 +1,4 @@
+from ctypes import Union
 import math
 import pandas as pd
 import numpy as np
@@ -103,3 +104,17 @@ def pandasLimitsDisable(disable:bool=True):
         pd.set_option('display.max_columns', None)
     else:
         pd.reset_option('^display.', silent=True)
+        
+        
+def typecast_column(column: pd.Series, data_type: Union[type, str]):
+    if data_type == 'datetime':
+        result = pd.to_datetime(column)
+    elif data_type == 'timedelta':
+        result = column.apply(lambda row: np.int16(pd.Timedelta(row).seconds))
+    elif data_type == int:
+        result = column.astype(np.int32)
+    elif data_type == float:
+        result = column.astype(np.float16)
+    else:
+        result = column.astype(data_type)
+    return result

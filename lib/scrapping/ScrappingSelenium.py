@@ -301,27 +301,7 @@ class SeleniumApp:
         else:
             print("That job doesn't exist")
             
-            
-def merge_shards(path_shards:str, header:list, path_output:str = None)->pd.DataFrame:
-    if path_shards.endswith("/"):
-        path_shards = path_shards[:-1]
-        
-    if path_output is not None:
-        if path_output.endswith("/"):
-            path_output = path_output[:-1]
-        
-    shards = os.listdir(path_shards)
-    print(f"Shards: {len(shards)}")
 
-    df = pd.DataFrame(columns=header)
-
-    for shard in shards:
-        file_name = f"{path_shards}/{shard}"
-        df = pd.concat([df, pd.read_csv(file_name)], axis=0, ignore_index=True)
-        
-    if path_output is not None:
-        df.to_csv(f"{path_output}/merged_shards.csv",index=False)
-    return df
 
 def check_jobs_complete(path_jobs:str):
     
