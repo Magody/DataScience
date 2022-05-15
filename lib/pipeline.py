@@ -84,8 +84,9 @@ class PA:
         df_result: pd.DataFrame = df.copy()
 
         columns = df.columns
-        for column in columns:
+        for c in columns:
             try:
+                column = c
                 pipeline_actions = data_scheme.get(column,[])
                 
                 for pa_group in pipeline_actions:
@@ -117,9 +118,13 @@ class PA:
                             map_replace[key] = median
                         df_result[column].replace(map_replace, inplace=True)
                     elif pa == PA.RENAME:
-                        df_result.rename(columns={column: pa_group[1]}, inplace=True)
+                        column_new = pa_group[1]
+                        df_result.rename(columns={column: column_new}, inplace=True)
+                        column = column_new
                     elif pa == PA.RENAME_LOWER_CASE:
-                        df_result.rename(columns={column: column.lower()}, inplace=True)
+                        column_new = column.lower()
+                        df_result.rename(columns={column: column_new}, inplace=True)
+                        column = column_new
                     elif pa == PA.CREATE_DUMMIES:
                         df_result = df_result.join(pd.get_dummies(df_result[column], prefix=column))
                         df_result.drop(column, axis=1, inplace=True)
@@ -127,7 +132,7 @@ class PA:
                         print("ERROR, unknown PA", pa)
 
             except Exception as e:
-                print(f"Error while processing column '{column}': {e}")
+                print(f"Error while processing column '{column}'", e)
 
 
         return df_result
