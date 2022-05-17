@@ -3,6 +3,7 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
 import pandas as pd
+import seaborn as sns
 
 def getVarianceLowColumns(df, threshold=0.1):
     
@@ -132,3 +133,35 @@ def reducePCA(X, n_components = 16):
     X_reduced_pca = pd.DataFrame(X_reduced_pca, columns=[f"feature{i}" for i in range(1,n_components+1)])
     
     return X_reduced_pca, pca
+
+
+def bucket_feature(df_original, column_name, target=None, custom_bins_feature=None, maximum=-1, bins=10):
+    
+    df = df_original.copy()
+    
+    bins_feature = []
+    if custom_bins_feature is None:
+        if maximum == -1:
+            maximum = df[column_name].max()
+        steps = maximum // bins
+        bins_feature = [i for i in range(0,maximum+bins,steps)] # [0,20,30,35,40,45,60,80, np.inf]
+    else:
+        bins_feature = custom_bins_feature
+        
+    if bins_feature[0] == 0:
+        bins_feature[0] = -1
+        
+    band_name = f"band_{column_name}"
+    labels_feature = [i for i in range(len(bins_feature)-1)]
+    
+    # print(bins_feature, labels_feature)
+    
+    df[band_name] = pd.cut(df[column_name], bins=bins_feature, labels=labels_feature)
+
+    if target is not None:
+        # see summary
+        count_band_age_churn = df[[band_name, target[0]]].groupby([band_name]).count()
+        print(count_band_age_churn)
+        sns.barplot(x=count_band_age_churn.index, y=count_band_age_churn[target[0]])
+        
+    return df

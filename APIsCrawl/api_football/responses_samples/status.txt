@@ -1,0 +1,2 @@
+/status
+'{"get":"status","parameters":[],"errors":[],"results":1,"paging":{"current":1,"total":1},"response":{"account":{"firstname":"Danny","lastname":"D\\u00edaz","email":"danny.sebastian.diaz@gmail.com"},"subscription":{"plan":"Free","end":"2023-04-15T00:00:00+00:00","active":true},"requests":{"current":1,"limit_day":100}}}'

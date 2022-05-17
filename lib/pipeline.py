@@ -1,4 +1,4 @@
-from lib.feature_engineering import *
+from feature_engineering import *
 
 class PipelineCorrelation:
     
@@ -39,3 +39,100 @@ class PipelineCorrelation:
             history['features_important'] = X.columns      
         
         return X, history
+    
+    
+# Basic cleaning for consuming
+import math
+
+class PA:
+    # Pipeline Actions
+    DROP = 0
+    TYPECAST = 1
+    # SCALE = 2
+    REPLACE = 3
+    RENAME = 4
+    REPLACE_WITH_MODE = 5
+    REPLACE_WITH_MEDIAN = 6
+    RENAME_LOWER_CASE = 7
+    CREATE_DUMMIES = 8
+
+    PIPELINE_BASE_COMMON_INT = [
+        [REPLACE_WITH_MEDIAN,[np.nan]], 
+        [TYPECAST,np.int16],
+        [RENAME_LOWER_CASE],
+    ]
+
+    PIPELINE_BASE_COMMON_MODE_INT = [
+        [REPLACE_WITH_MODE,[np.nan]],
+        [TYPECAST,np.int16],
+        [RENAME_LOWER_CASE],
+    ]
+
+    @staticmethod
+    def is_real_number(x):
+        try:
+            cast_x = float(x)
+            if math.isnan(cast_x):
+                return False
+            else:
+                return True
+        except:
+            return False
+
+    @staticmethod
+    def exec(df: pd.DataFrame, data_scheme:dict):
+        df_result: pd.DataFrame = df.copy()
+
+        columns = df.columns
+        for c in columns:
+            try:
+                column = c
+                pipeline_actions = data_scheme.get(column,[])
+                
+                for pa_group in pipeline_actions:
+                    pa = pa_group[0]
+
+                    if pa == PA.DROP:
+                        df_result.drop(column, axis=1,inplace=True)
+                    elif pa == PA.REPLACE:
+                        map_replace = {}
+                        for key,value in zip(pa_group[1],pa_group[2]):
+                            map_replace[key] = value
+
+                        df_result[column].replace(map_replace, inplace=True)
+                    elif pa == PA.TYPECAST:
+                        df_result[column] = df_result[column].astype(pa_group[1])
+
+                    elif pa == PA.REPLACE_WITH_MODE:
+                        mode = df_result[df_result[column].notna()][column].mode()[0]
+                        map_replace = {}
+                        for key in pa_group[1]:
+                            map_replace[key] = mode
+                        df_result[column].replace(map_replace, inplace=True)
+
+                    elif pa == PA.REPLACE_WITH_MEDIAN:
+                        # works even if exist text in the column
+                        median = df_result[df_result[column].apply(PA.is_real_number)][column].median()
+                        map_replace = {}
+                        for key in pa_group[1]:
+                            map_replace[key] = median
+                        df_result[column].replace(map_replace, inplace=True)
+                    elif pa == PA.RENAME:
+                        column_new = pa_group[1]
+                        df_result.rename(columns={column: column_new}, inplace=True)
+                        column = column_new
+                    elif pa == PA.RENAME_LOWER_CASE:
+                        column_new = column.lower()
+                        df_result.rename(columns={column: column_new}, inplace=True)
+                        column = column_new
+                    elif pa == PA.CREATE_DUMMIES:
+                        df_result = df_result.join(pd.get_dummies(df_result[column], prefix=column))
+                        df_result.drop(column, axis=1, inplace=True)
+                    else:
+                        print("ERROR, unknown PA", pa)
+
+            except Exception as e:
+                print(f"Error while processing column '{column}'", e)
+
+
+        return df_result

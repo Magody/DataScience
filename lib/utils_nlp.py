@@ -1,7 +1,10 @@
 
+from collections import Counter
 import nltk
 
 from nltk import word_tokenize
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+nltk.download('vader_lexicon')
 
 """
 # reverse mapping
@@ -28,3 +31,20 @@ def wordToIdx(df):
         tokenized_docs.append(doc_as_int)
 
     return word2idx, doc_as_int, tokenized_docs
+
+# Lets check keywords
+def get_most_common_keywords(df, label="title", amount=20):
+
+    return Counter(" ".join(df[label]).split()).most_common(amount)
+
+def label_sentiment(text):
+    score = SentimentIntensityAnalyzer().polarity_scores(text)
+    neg = score["neg"]
+    neu = score["neu"]
+    pos = score["pos"]
+    comp = score["compound"]
+    if neg > pos:
+        return -neg
+    elif pos > neg:
+        return pos
+    return 0
