@@ -1,3 +1,0 @@
-conda create -n ridetel_chatbot python=3.6
-conda activate ridetel_chatbot
-conda deactivate

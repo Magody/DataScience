@@ -178,7 +178,30 @@ def loadAgentsInfo(agents_base, chatbots_path, verbose=0, BASE_OTHERS=40):
     return agents
 
 
-def fillAgentsPatterns(path_brain_flow: str, documents_chatbots: dict, verbose=0, BASE_OTHERS=40):
+def fill_non_natural_language_intents(path_brain_flow: str, documents_chatbots: dict, verbose=0, BASE_OTHERS=40)->dict:
+    """Inflates/Fill training data for common intents/redirects. Also handles the imbalanced data,
+    trying to set equal number of training data for each tag.
+    
+    - For intent of type "otros" will create empty values as training.
+    - For intents of type "cb*" (no natural language only redirect) it collects training data generated
+        for that specific chatbot. Example: cb_signature will have a file cb_signature.txt
+        with all phrases from all its intents.
+    - For intents of type "my_broker" (redirect to broker). It collects all intents in the systems minus the intents
+        in the current branch. This is, predicts every topic different to actual. So, will probably
+        return to broker.
+    
+
+    Args:
+        path_brain_flow (str): folder path where the TXT are being generated with intents.
+        documents_chatbots (dict): Chatbots information of brain. This dict should have training info. 
+            It will get a copy and return the copy with modifications
+        verbose (int, optional): Verbose level for log messages. Defaults to 0.
+        BASE_OTHERS (int, optional): Number of empty samples to fill in this intent. Defaults to 40.
+
+    Returns:
+        dict: document_chatbot with the training info augmented for every no natural language intent.
+    """
+    
     
     agents = documents_chatbots
     # print("BEGIN", agents)
@@ -202,7 +225,7 @@ def fillAgentsPatterns(path_brain_flow: str, documents_chatbots: dict, verbose=0
 
             if not intent.get("is_natural_language_tag", False) and (tag.startswith("cb") or tag == "my_broker"):
                 
-
+                # Collect broker training data and eliminates branch training data
                 if tag == "my_broker":
                     # this means, all other data but not data on my forward branch
                     f_broker = open(os.path.join(path_brain_flow, f"broker.txt"), "r", encoding="utf-8")

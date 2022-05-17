@@ -1,0 +1,92 @@
+{
+    "context" : {},
+    "type" : "normal",
+    "state" : "",
+    "nn_config" : {
+        "epochs" : 50,
+        "batch_size" : 64,
+        "optimizer" : {
+            "name" : "Adam",
+            "parameters" : {
+                "learning_rate" : 0.001
+            }
+        },
+        "nn_structure" : [ 
+            {
+                "name" : "input_layer",
+                "output_neurons" : 32,
+                "activation_function" : "relu"
+            }, 
+            {
+                "name" : "dropout",
+                "value" : 0.5
+            }, 
+            {
+                "name" : "hidden_layer",
+                "output_neurons" : 16,
+                "activation_function" : "relu"
+            }, 
+            {
+                "name" : "dropout",
+                "value" : 0.5
+            }, 
+            {
+                "name" : "output_layer",
+                "activation_function" : "softmax"
+            }
+        ]
+    },
+    "intents" : {
+        "greetings" : {
+            "state" : "",
+            "training" : [ 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey", 
+                "Hello, mr dijey"
+            ],
+            "responses" : [ 
+                "hola", 
+                "a", 
+                "ti"
+            ],
+            "require_context" : false,
+            "next_chatbot_name" : "broker",
+            "next_chatbot_name_if_no_context" : "broker",
+            "is_natural_language_tag" : true
+        },
+        "bye" : {
+            "state" : "",
+            "training" : [ 
+                "goodbye", 
+                "goodbye", 
+                "goodbye", 
+                "goodbye", 
+                "goodbye", 
+                "goodbye", 
+                "goodbye", 
+                "goodbye", 
+                "goodbye", 
+                "goodbye", 
+                "goodbye"
+            ],
+            "responses" : [ 
+                "ciao", 
+                "oh"
+            ],
+            "require_context" : false,
+            "next_chatbot_name" : "broker",
+            "next_chatbot_name_if_no_context" : "broker",
+            "is_natural_language_tag" : true
+        }
+    }
+}

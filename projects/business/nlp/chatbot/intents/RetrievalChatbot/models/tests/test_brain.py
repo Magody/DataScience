@@ -20,7 +20,7 @@ def test_brain(collection_name_conversations, mongoDatabase: MongoDatabase, brai
     while True:
 
         conversation_id = "test"
-        message = input(">>you: ")
+        message = input(">>you (send q for quit): ")
         if message == "q":
             break
 

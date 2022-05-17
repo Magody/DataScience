@@ -1,5 +1,4 @@
 
-from telegram import message
 from .ChatbotRetrieval import ChatbotRetrieval
 from .Conversation import *
 import re
