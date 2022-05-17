@@ -230,7 +230,10 @@ class SeleniumApp:
         
     def run(self, username:str, password:str):
         self.scrapper.prewarming()
-        self.scrapper.login(username, password)
+        if username is None and password is None:
+            self.scrapper.logged_in = True
+        else:
+            self.scrapper.login(username, password)
     
     def create_jobs(self, url_begin, job_id_start=1, job_batch_items=100):
         """Run the scrapper with login before this.
@@ -271,6 +274,14 @@ class SeleniumApp:
             job_id += 1
             i = i_end + 1
         
+        try:
+            with open(f"{self.path_jobs}/urls_backup.txt", "w+") as f_out:
+                f_out.writelines(
+                    map(lambda s: s+"\n", urls)
+                )
+        except Exception as e:
+            print("Cant, create a backup", e)
+        
         self.close()
     
     def close(self):
@@ -309,6 +320,7 @@ def check_jobs_complete(path_jobs:str):
         path_jobs = path_jobs[:-1]
     
     jobs = os.listdir(path_jobs)
+    jobs = [j for j in jobs if not j.endswith("txt")]
     
     jobs_incomplete = []
     for job in jobs:
@@ -318,5 +330,31 @@ def check_jobs_complete(path_jobs:str):
             if job_info["state"] != State.END:
                 jobs_incomplete.append(job)
     print(f"Incomplete:{jobs_incomplete}")
-    
+
+
+            
+def merge_shards(path_shards:str, header:list, path_output:str = None)->pd.DataFrame:
+    if path_shards.endswith("/"):
+        path_shards = path_shards[:-1]
+        
+    if path_output is not None:
+        if path_output.endswith("/"):
+            path_output = path_output[:-1]
+        
+    shards = os.listdir(path_shards)
+    print(f"Shards: {len(shards)}")
+
+    df = pd.DataFrame(columns=header)
+
+    for shard in shards:
+        file_name = f"{path_shards}/{shard}"
+        df_to_join = pd.read_csv(file_name)
+        if len(df_to_join) == 0:
+            print(f"Shard: {shard} is empty")
+            continue
+        df = pd.concat([df, df_to_join], axis=0, ignore_index=True)
+        
+    if path_output is not None:
+        df.to_csv(f"{path_output}/merged_shards.csv",index=False)
+    return df    
     
