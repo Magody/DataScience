@@ -15,7 +15,7 @@ responses = getChatbotsResponses(mongoDatabase, 1)
 from ..Monitor.GeneralMonitor import GeneralMonitor
 from ..Conversation import *
 
-def test_monitor(user, brain_name, db_name):
+def test_monitor(mongoDatabase:MongoDatabase, user:str, brain_name:str)->None:
 
 
     Config.TIME_SECONDS_WAIT_FOR_FREE_MEMORY = 10
@@ -23,17 +23,13 @@ def test_monitor(user, brain_name, db_name):
     Config.TIME_SECONDS_WAIT_BASE_THREAD = 5
     Config.TIME_MINUTES_BOT_WAIT_TO_RESET = 1
 
-
-    mongoDatabase =  MongoDatabase(db_name, "mongodb://%s:%s@zeus.ridetel.com:27018" % ("mongoadmin", "B0t.2021"))
-
-
     try:
         GeneralMonitor.init()
 
         type = "text"
-        message = "servidor jurídico"
-        mobile = "+593978654041"
-        user = user
+        message = "hello"
+        mobile = "+5939******041"
+        mobile2 = "+593911111042"
 
         others = dict()
         # others["updater"] = updater
@@ -41,12 +37,12 @@ def test_monitor(user, brain_name, db_name):
         GeneralMonitor.addMessageToUserMonitor(user, brain_name, mobile, message, others, mongoDatabase, type)
         time.sleep(5)
         GeneralMonitor.addMessageToUserMonitor(user, brain_name, mobile, "Message sorpresa", others, mongoDatabase, type)
-        GeneralMonitor.addMessageToUserMonitor(user, brain_name, "+593978654042", "Message otro dos", others, mongoDatabase, type)
+        GeneralMonitor.addMessageToUserMonitor(user, brain_name, mobile2, "Message otro dos", others, mongoDatabase, type)
         time.sleep(5)
-        GeneralMonitor.addMessageToUserMonitor(user, brain_name, "+593978654042", "dos t1", others, mongoDatabase, type)
-        GeneralMonitor.addMessageToUserMonitor(user, brain_name, "+593978654042", "dos t2", others, mongoDatabase, type)
+        GeneralMonitor.addMessageToUserMonitor(user, brain_name, mobile2, "Goodbye 1", others, mongoDatabase, type)
+        GeneralMonitor.addMessageToUserMonitor(user, brain_name, mobile2, "Hello 2", others, mongoDatabase, type)
         
-        time.sleep(20)
+        time.sleep(5)
     finally:
         GeneralMonitor.die()
         while GeneralMonitor.existMessagesToProcess():

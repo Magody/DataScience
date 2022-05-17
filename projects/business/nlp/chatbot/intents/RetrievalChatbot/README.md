@@ -14,3 +14,5 @@ $ docker exec -it nlp_brain_chatbot bash
 
 run python nltk_downloads.py to download corpus
 
+
+TODO: Check monitor

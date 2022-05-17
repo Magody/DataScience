@@ -1,4 +1,3 @@
-
 from models.BrainRetrieval import BrainRetrieval
 from models.db.MongoDatabase import MongoDatabase
 from ..Conversation import Conversation, ConversationContext
@@ -29,10 +28,12 @@ class GeneralMonitor:
     def init(thread_function: threading.Thread = test_monitor, mode=Config.MODE_TEST):
         GeneralMonitor.thread_function = thread_function
         GeneralMonitor.thread_memory = threading.Thread(
-            target=thread_general_monitor_manage_memory, args=())
+            target=thread_general_monitor_manage_memory, args=()
+        )
         GeneralMonitor.thread_memory.start()
         GeneralMonitor.thread_update = threading.Thread(
-            target=thread_update_data, args=())
+            target=thread_update_data, args=()
+        )
         GeneralMonitor.thread_update.start()
 
         Config.mode = mode
@@ -48,7 +49,6 @@ class GeneralMonitor:
         elif mode == Config.MODE_STAGING:
             Config.TIME_MINUTES_BOT_WAIT_TO_RESET = 3
             Config.TIME_SECONDS_UPDATE_DATA = 60
-        
 
         elif mode == Config.MODE_GOSSIP:
 
@@ -84,7 +84,7 @@ class GeneralMonitor:
         if GeneralMonitor.existUserMonitor(username):
 
             if not GeneralMonitor.users_monitors[username]["is_being_deleted"]:
-                print("unique id ya existe en la memoria compartida")
+                print("unique id already exists in shared memory")
                 return False
 
             else:
@@ -94,7 +94,8 @@ class GeneralMonitor:
 
         GeneralMonitor.users_monitors[username] = dict()
         GeneralMonitor.users_monitors[username]["user_monitor"] = UserMonitor(
-            GeneralMonitor.thread_function, mongoDatabase, username)
+            GeneralMonitor.thread_function, mongoDatabase, username
+        )
         GeneralMonitor.users_monitors[username]["is_being_deleted"] = False
 
         return True
@@ -114,25 +115,45 @@ class GeneralMonitor:
 
                     conversation: Conversation = value
 
-                    if len(conversation.message_queue) > 0 or conversation.is_using_message_to_queue or len(conversation.buffer_message_queue) > 0:
+                    if (
+                        len(conversation.message_queue) > 0
+                        or conversation.is_using_message_to_queue
+                        or len(conversation.buffer_message_queue) > 0
+                    ):
                         # exist messages
                         return True
 
         return False
 
     @staticmethod
-    def addMessageToUserMonitor(username: str, brain_name: str, mobile: str, message: str, others: dict, mongoDatabase: MongoDatabase, message_type: str) -> bool:
+    def addMessageToUserMonitor(
+        username: str,
+        brain_name: str,
+        mobile: str,
+        message: str,
+        others: dict,
+        mongoDatabase: MongoDatabase,
+        message_type: str,
+    ) -> bool:
 
         if not GeneralMonitor.existUserMonitor(username):
 
             if not GeneralMonitor.addUserMonitor(username, mongoDatabase):
-                print("No se pudo crear el monitor")
+                print("Error: Can't create the UserMonitor")
                 return False
 
         unique_id = f"{username}_{brain_name}_{mobile}"
-        if not GeneralMonitor.users_monitors[username]["user_monitor"].addMessageToQueue(brain_name, unique_id, mobile, message, others, mongoDatabase, message_type):
-            print("General Monitor: addMessageToUserMonitor: No se pudo agregar mensaje a ",
-                  username, brain_name, unique_id)
+        if not GeneralMonitor.users_monitors[username][
+            "user_monitor"
+        ].addMessageToQueue(
+            brain_name, unique_id, mobile, message, others, mongoDatabase, message_type
+        ):
+            print(
+                "General Monitor: addMessageToUserMonitor: No se pudo agregar mensaje a ",
+                username,
+                brain_name,
+                unique_id,
+            )
 
         return True
 
@@ -153,17 +174,18 @@ class GeneralMonitor:
         return not GeneralMonitor.existUserMonitor(username)
 
     @staticmethod
-    def resetContextOfUserBrainConversation(username, mongoDatabase, APP_CONTEXT, brain_name, mobile):
+    def resetContextOfUserBrainConversation(
+        username, mongoDatabase, APP_CONTEXT, brain_name, mobile
+    ):
 
-        userMonitor: UserMonitor = GeneralMonitor.users_monitors.get(
-            username, None)
+        userMonitor: UserMonitor = GeneralMonitor.users_monitors.get(username, None)
         if userMonitor is None:
-            userMonitor: UserMonitor = UserMonitor(
-                None, mongoDatabase, username)
+            userMonitor: UserMonitor = UserMonitor(None, mongoDatabase, username)
         else:
             userMonitor = userMonitor["user_monitor"]
         userMonitor.resetContextOfBrainConversation(
-            APP_CONTEXT, brain_name, f"{username}_{brain_name}_{mobile}")
+            APP_CONTEXT, brain_name, f"{username}_{brain_name}_{mobile}"
+        )
 
 
 def thread_general_monitor_manage_memory():
@@ -178,8 +200,7 @@ def thread_general_monitor_manage_memory():
 
         for username, user_monitor_dict in GeneralMonitor.users_monitors.items():
 
-            userMonitor: UserMonitor = user_monitor_dict.get(
-                "user_monitor", None)
+            userMonitor: UserMonitor = user_monitor_dict.get("user_monitor", None)
             if userMonitor is None:
                 continue
 
@@ -205,7 +226,9 @@ def thread_general_monitor_manage_memory():
 
         for username in users_to_remove:
 
-            userMonitor: UserMonitor = GeneralMonitor.users_monitors[username]["user_monitor"]
+            userMonitor: UserMonitor = GeneralMonitor.users_monitors[username][
+                "user_monitor"
+            ]
 
             # doble safe control
             if userMonitor.should_be_deleted:
@@ -214,18 +237,22 @@ def thread_general_monitor_manage_memory():
 
                 if userMonitor.time_to_live <= 0:
 
-                    length_conversations = len(
-                        GeneralMonitor.users_monitors.items())
+                    length_conversations = len(GeneralMonitor.users_monitors.items())
                     logging.info(
-                        f"Trying to remove User monitor {username}: actual length: {length_conversations}")
+                        f"Trying to remove User monitor {username}: actual length: {length_conversations}"
+                    )
                     if GeneralMonitor.removeUserMonitorFromMemory(username):
                         length_conversations = len(
-                            GeneralMonitor.users_monitors.items())
+                            GeneralMonitor.users_monitors.items()
+                        )
                         logging.info(
-                            f"username {username}: removed, actual length: {length_conversations}")
+                            f"username {username}: removed, actual length: {length_conversations}"
+                        )
                     else:
                         logging.info(
-                            "username %s: Error: cant remove from memory the unique ID", username)
+                            "username %s: Error: cant remove from memory the unique ID",
+                            username,
+                        )
 
 
 def thread_update_data():

@@ -199,7 +199,7 @@ def main():
     trainHelper = TrainHelper(mongoDatabase, user, brain_name, verbose)
     trainHelper.train(chatbot_target=chatbot_target, save_plots=True)
 
-if __name__ == "main":
+if __name__ == "__main__":
     # Run only if wasn't imported
     main()
 

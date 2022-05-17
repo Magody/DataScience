@@ -1,6 +1,5 @@
 import random
 import json
-import pickle
 from typing import Tuple
 import numpy as np
 
@@ -13,7 +12,7 @@ import logging
 
 from tensorflow.python.ops.gen_array_ops import deep_copy
 
-from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.models import Sequential, load_model as load_model_tensorflow
 from tensorflow.keras.layers import Dense, Activation, Dropout
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow.keras import metrics as tf_metrics
@@ -67,10 +66,7 @@ class ChatbotRetrieval:
             self.nn_structure = nn_config["nn_structure"]
 
         if preload_model:
-            # print("Preloading model")
-            self.model = load_model(self.directory + "/model.h5")
-            self.words = pickle.load(open(self.directory + "/words.pkl", "rb"))
-            self.classes = pickle.load(open(self.directory + "/classes.pkl", "rb"))
+            self.loadModel()
 
 
     @staticmethod
@@ -139,9 +135,8 @@ class ChatbotRetrieval:
             print("\nRemoved", count_removed)
             print("WoRDS clean", self.words)
 
-        pickle.dump(self.words, open(os.path.join(self.directory, "words.pkl"), "wb"))
-        pickle.dump(self.classes, open(os.path.join(self.directory, "classes.pkl"), "wb"))
-
+        self.save_model()
+        
 
     def train(self, porc_train=0.7, porc_val=0.1, verbose=0):
                 
@@ -299,17 +294,28 @@ class ChatbotRetrieval:
 
         return hist.history, self.model.evaluate(np.array(x_test), np.array(y_test))
 
+    def save_model(self):
+        with open(os.path.join(self.directory, "words.json"), "w+") as f_words:
+            json.dump(self.words, f_words)
+            
+        with open(os.path.join(self.directory, "classes.json"), "w+") as f_classes:
+            json.dump(self.classes, f_classes)
+
     def loadModel(self):
         if self.name == "human":
             return True
-
         try:
-            self.model = load_model(self.directory + "/model.h5")
-            self.words = pickle.load(open(self.directory + "/words.pkl", "rb"))
-            self.classes = pickle.load(open(self.directory + "/classes.pkl", "rb"))
+            self.model = load_model_tensorflow(self.directory + "/model.h5")
+            
+            with open(os.path.join(self.directory, "words.json"), "r") as f_words:
+                self.words = json.load(f_words)
+                
+            with open(os.path.join(self.directory, "classes.json"), "r") as f_classes:
+                self.classes = json.load(f_classes)
+            
             return True
         except Exception as exception:
-            print("No se pudo cargar el model", self.directory, self.name)
+            print("Can't load the model", self.directory, self.name, exception)
             return False
 
     def predict(self, sentence, ERROR_THRESHOLD=0, MINIMUN_ACCURACY=0.85, verbose=0, reload_model=False) -> Tuple[list,dict]:
@@ -375,9 +381,7 @@ class ChatbotRetrieval:
 
     def evaluateWeakness(self, verbose=0):
         if self.model is None:
-            self.model = load_model(self.directory + "/model.h5")
-            self.words = pickle.load(open(self.directory + "/words.pkl", "rb"))
-            self.classes = pickle.load(open(self.directory + "/classes.pkl", "rb"))
+            self.loadModel()
 
         scores = {}
 

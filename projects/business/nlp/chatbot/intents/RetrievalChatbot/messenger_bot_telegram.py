@@ -21,8 +21,6 @@ import numpy as np
 
 from tensorflow.keras.models import load_model
 
-from flask import Flask, request, jsonify
-
 from models.util.nltk_transforms import *
 from models.BrainRetrieval import BrainRetrieval
 
@@ -55,8 +53,10 @@ def echo(update: Update, telegramContext: CallbackContext) -> None:
     # messenger configuration
     global brain_name
 
-    mongoDatabase = MongoDatabase(Config.DB_NAME, "mongodb://%s:%s@%s:%d" % (Config.MONGODB_USER, Config.MONGODB_PASSWORD, Config.HOST, Config.MONGO_DB_PORT))
-        
+    mongoDatabase = MongoDatabase(
+        Config.DB_NAME,
+        f"mongodb://{Config.MONGODB_USER}:{Config.MONGODB_PASSWORD}@{Config.HOST}:{Config.MONGO_DB_PORT}/{Config.DB_NAME}?retryWrites=true&w=majority",
+    )   
 
     others = dict()
     others["updater"] = telegramContext

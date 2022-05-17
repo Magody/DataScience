@@ -64,7 +64,7 @@ class TestHelper:
                 self.mongoDatabase, self.chatbots, self.brain_name, chatbot_name
             )
         elif test_type == "monitor":
-            test_monitor(self.brain_name)
+            test_monitor(self.mongoDatabase, self.user, self.brain_name)
         else:
             print(test_type, "does not exist")
 
@@ -74,6 +74,7 @@ def main():
     Base:    python app_test.py <test_type(brain,individual,monitor)> <brain_name> <optional:chatbot_specific>
     Example1: python app_test.py brain brain_walichat
     Example2: python app_test.py individual brain_walichat cb_signatures
+    Example2: python app_test.py monitor brain_walichat
     """
     args = sys.argv
     print("Number of arguments:", len(sys.argv), "arguments.")
@@ -96,6 +97,6 @@ def main():
     testHelper.run_commant_test(test_type, chatbot_name)
 
 
-if __name__ == "main":
+if __name__ == "__main__":
     # Executes only if is not an import
     main()
