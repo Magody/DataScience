@@ -7,11 +7,14 @@ cap.set(3, frameWidth)
 cap.set(4, frameHeight)
 cap.set(10,150)
 
+# Colors that we want to detect
+# We set the limits: hue_min,sat_min,value_min,hue_max,sat_max,value_max
 myColors = [[5,107,0,19,255,255],
             [133,56,0,159,156,255],
             [57,76,0,100,255,255],
             [90,48,0,118,255,255]]
-myColorValues = [[51,153,255],          ## BGR
+## BGR colors
+myColorValues = [[51,153,255],          
                  [255,0,255],
                  [0,255,0],
                  [255,0,0]]
@@ -23,8 +26,8 @@ def findColor(img,myColors,myColorValues):
     count = 0
     newPoints=[]
     for color in myColors:
-        lower = np.array(color[0:3])
-        upper = np.array(color[3:6])
+        lower = np.array(color[0:3]) # mins hue,sat,value...
+        upper = np.array(color[3:6]) # max hue,sat,value..
         mask = cv2.inRange(imgHSV,lower,upper)
         x,y=getContours(mask)
         cv2.circle(imgResult,(x,y),15,myColorValues[count],cv2.FILLED)
@@ -50,7 +53,7 @@ def drawOnCanvas(myPoints,myColorValues):
     for point in myPoints:
         cv2.circle(imgResult, (point[0], point[1]), 10, myColorValues[point[2]], cv2.FILLED)
 
-
+# show the webcam imgs
 while True:
     success, img = cap.read()
     imgResult = img.copy()

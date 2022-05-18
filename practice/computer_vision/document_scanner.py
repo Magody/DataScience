@@ -2,15 +2,6 @@ import cv2
 import numpy as np
 
 
-###################################
-widthImg=540
-heightImg =640
-#####################################
-
-cap = cv2.VideoCapture(0)
-cap.set(10,150)
-
-
 def preProcessing(img):
     imgGray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     imgBlur = cv2.GaussianBlur(imgGray,(5,5),1)
@@ -93,26 +84,41 @@ def stackImages(scale,imgArray):
         ver = hor
     return ver
 
-while True:
-    success, img = cap.read()
-    img = cv2.resize(img,(widthImg,heightImg))
-    imgContour = img.copy()
 
-    imgThres = preProcessing(img)
-    biggest = getContours(imgThres)
-    if biggest.size !=0:
-        imgWarped=getWarp(img,biggest)
-        # imageArray = ([img,imgThres],
-        #           [imgContour,imgWarped])
-        imageArray = ([imgContour, imgWarped])
-        cv2.imshow("ImageWarped", imgWarped)
-    else:
-        # imageArray = ([img, imgThres],
-        #               [img, img])
-        imageArray = ([imgContour, img])
 
-    stackedImages = stackImages(0.6,imageArray)
-    cv2.imshow("WorkFlow", stackedImages)
+###################################
+widthImg=540
+heightImg =640
+#####################################
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+# cap = cv2.VideoCapture(0)
+# cap.set(10,150)
+
+
+# while True:
+# success, img = cap.read()
+path_data_images = "/home/magody/programming/python/data_science/data/images_opencv"
+
+img = cv2.imread(f'{path_data_images}/1.jpg')
+img = cv2.resize(img,(widthImg,heightImg))
+imgContour = img.copy()
+
+imgThres = preProcessing(img)
+biggest = getContours(imgThres)
+if biggest.size !=0:
+    imgWarped=getWarp(img,biggest)
+    # imageArray = ([img,imgThres],
+    #           [imgContour,imgWarped])
+    imageArray = ([imgContour, imgWarped])
+    cv2.imshow("ImageWarped", imgWarped)
+else:
+    # imageArray = ([img, imgThres],
+    #               [img, img])
+    imageArray = ([imgContour, img])
+
+stackedImages = stackImages(0.6,imageArray)
+cv2.imshow("WorkFlow", stackedImages)
+
+cv2.waitKey(0)
+# if cv2.waitKey(1) & 0xFF == ord('q'):
+#    break
