@@ -1,12 +1,15 @@
 import cv2
-from cvzone.HandTrackingModule import HandDetector
-import cvzone
+import sys
+sys.path.append("/home/magody/programming/python/data_science/lib/computer_vision")
+from HandTracking import HandDetector  # type: ignore
+from utils_opencv import cornerRect  # type: ignore
 import numpy as np
 
-cap = cv2.VideoCapture(0)
-cap.set(3, 1280)
-cap.set(4, 720)
-detector = HandDetector(detectionCon=0.8)
+
+cap = cv2.VideoCapture(2)
+cap.set(3, 800)
+cap.set(4, 400)
+detector = HandDetector(min_detection_confidence=0.8)
 colorR = (255, 0, 255)
 
 cx, cy, w, h = 100, 100, 200, 200
@@ -34,27 +37,26 @@ for x in range(5):
 while True:
     success, img = cap.read()
     img = cv2.flip(img, 1)
-    img = detector.findHands(img)
-    lmList, _ = detector.findPosition(img)
+    hands, img = detector.find_hands(img, flipType=True)
 
-    if lmList:
+    if hands:
+        # Hand 1
+        hand1 = hands[0]
+        lmList1 = hand1["lmList"]  # List of 21 Landmark points
+        if lmList1:
 
-        l, _, _ = detector.findDistance(8, 12, img, draw=False)
-        print(l)
-        if l < 30:
-            cursor = lmList[8]  # index finger tip landmark
-            # call the update here
-            for rect in rectList:
-                rect.update(cursor)
+            # send img and return image to draw distance
+            point_index = lmList1[8][0:2]
+            point_middle = lmList1[12][0:2]
+            l, _, _ = detector.find_distance(point_index, point_middle, img=None)
+            print(l)
+            if l < 40:
+                cursor = lmList1[8][0:2]  # index finger tip landmark
+                # call the update here
+                for rect in rectList:
+                    rect.update(cursor)
 
-    ## Draw solid
-    # for rect in rectList:
-    #     cx, cy = rect.posCenter
-    #     w, h = rect.size
-    #     cv2.rectangle(img, (cx - w // 2, cy - h // 2),
-    #                   (cx + w // 2, cy + h // 2), colorR, cv2.FILLED)
-    #     cvzone.cornerRect(img, (cx - w // 2, cy - h // 2, w, h), 20, rt=0)
-
+    
     ## Draw Transperency
     imgNew = np.zeros_like(img, np.uint8)
     for rect in rectList:
@@ -62,13 +64,13 @@ while True:
         w, h = rect.size
         cv2.rectangle(imgNew, (cx - w // 2, cy - h // 2),
                       (cx + w // 2, cy + h // 2), colorR, cv2.FILLED)
-        cvzone.cornerRect(imgNew, (cx - w // 2, cy - h // 2, w, h), 20, rt=0)
+        cornerRect(imgNew, (cx - w // 2, cy - h // 2, w, h), 20, rt=0)
+
 
     out = img.copy()
-    alpha = 0.5
     mask = imgNew.astype(bool)
+    alpha = 0.5
     out[mask] = cv2.addWeighted(img, alpha, imgNew, 1 - alpha, 0)[mask]
 
     cv2.imshow("Image", out)
     cv2.waitKey(1)
-﻿
