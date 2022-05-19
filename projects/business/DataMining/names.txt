@@ -1,0 +1,381 @@
+Achar Chicken
+Achar Lamb
+Aloo Brinjal
+Aloo Chaat
+Aloo Dupiaza
+Aloo Gobi
+Aloo Methi
+Aloo Mithy
+Aloo Peas
+Baingan Hari Mirch
+Bangon Hari Mirch
+Bengal Fish Biryani
+Bengal Fish Karahi
+Bengal Fry Fish
+Bengal King Prawn
+Bengal Salad
+Bhindi Bhajee
+Bhuna
+Bhuna - Chicken
+Bhuna - Chicken Tikka
+Bhuna - King Prawn
+Bhuna - Lamb
+Bhuna - Prawn
+Bhuna - chicken
+Bhuna - chicken-tikka
+Bhuna - king-prawn
+Bhuna - lamb
+Bhuna - prawn
+Bombay
+Bombay - Chicken
+Bombay - Chicken Tikka
+Bombay - King Prawn
+Bombay - Lamb
+Bombay - Prawn
+Bombay - chicken
+Bombay - chicken-tikka
+Bombay Aloo
+Bottle Coke
+Bottle Diet Coke
+Bottle Water 75cl
+Brinjal Bhajee
+Butter Chicken
+COBRA ( LARGE )
+COBRA (330ML)
+COBRA (660ML)
+Cauliflower Bhajee
+Chana Chaat
+Chana Masala
+Chapati
+Chicken Achar
+Chicken Balti
+Chicken Biryani
+Chicken Chaat
+Chicken Chaat (Main)
+Chicken Chaat Main
+Chicken Chilli Garlic
+Chicken Chilli Masala
+Chicken Chilli Suka
+Chicken Hari Mirch
+Chicken Haryali
+Chicken Karahi
+Chicken Mysore
+Chicken Pakora
+Chicken Rezala
+Chicken Roshni
+Chicken Royal
+Chicken Shashlick
+Chicken Shashlick Curry
+Chicken Shaslick
+Chicken Sylhet
+Chicken Tikka
+Chicken Tikka (Main)
+Chicken Tikka Balti
+Chicken Tikka Biryani
+Chicken Tikka Chilli Masala
+Chicken Tikka Garlic
+Chicken Tikka Jalfrezi
+Chicken Tikka Jeera
+Chicken Tikka Karahi
+Chicken Tikka Masala
+Chicken Tikka Pasanda
+Chicken Tikka Sizzler
+Chilli Paneer
+Coke 1.5 ltr
+Crispy Aloo
+Curry
+Curry - Chicken
+Curry - Chicken Tikka
+Curry - King Prawn
+Curry - Lamb
+Curry - Prawn
+Curry - chicken
+Curry - chicken-tikka
+Curry - king-prawn
+Curry - lamb
+Curry - prawn
+Curry Sauce
+Cylon
+Cylon - Chicken
+Cylon - Chicken Tikka
+Cylon - King Prawn
+Cylon - Lamb
+Cylon - Prawn
+Cylon - chicken
+Cylon - chicken-tikka
+Cylon - king-prawn
+Cylon - prawn
+Dahi
+Dall Samba
+Dhansak
+Dhansak - Chicken
+Dhansak - Chicken Tikka
+Dhansak - King Prawn
+Dhansak - Lamb
+Dhansak - Prawn
+Dhansak - chicken
+Dhansak - chicken-tikka
+Dhansak - king-prawn
+Dhansak - lamb
+Dhansak - prawn
+Dhansak Sauce
+Diet Coke 1.5 ltr
+Dupiaza
+Dupiaza - Chicken
+Dupiaza - Chicken Tikka
+Dupiaza - King Prawn
+Dupiaza - Lamb
+Dupiaza - Prawn
+Dupiaza - chicken
+Dupiaza - king-prawn
+Dupiaza - lamb
+Egg Paratha
+Egg Rice
+French Fries
+Garlic Chicken
+Garlic Chicken Rice
+Garlic Lamb
+Garlic Mirch Chicken
+Garlic Mirch Lamb
+Garlic Mushroom
+Garlic Naan
+Garlic Rice
+Garlic Tikka Chilli Masala
+Grapes Special
+Graps Specil
+Green Salad
+Hazary Lamb
+Hazary Lamb Chilli Garlic
+House Red wine 75cl
+House white wine 75cl
+Jeera Chicken
+Jinga Chillies
+Keema Aloo
+Keema Naan
+Keema Rice
+King Prawn Balti
+King Prawn Biryani
+King Prawn Butterfly
+King Prawn Hari Mirch
+King Prawn Jalfrezi
+King Prawn Karahi
+King Prawn Puree
+King Prawn Royal
+King Prawn Shaslick
+Korma
+Korma - Chicken
+Korma - Chicken Tikka
+Korma - King Prawn
+Korma - Lamb
+Korma - Prawn
+Korma - chicken
+Korma - chicken-tikka
+Korma - lamb
+Korma - prawn
+Korma Sauce
+Kulcha Naan
+Kurma
+Kurma Sauce
+Lal Mirch Chicken
+Lal Mirch Lamb
+Lamb Achar
+Lamb Balti
+Lamb Biryani
+Lamb Chilli Garlic
+Lamb Chilli Masala
+Lamb Chops
+Lamb Chops (Main)
+Lamb Hari Mirch
+Lamb Haryali
+Lamb Karahi
+Lamb Mysore
+Lamb Persian
+Lamb Rezala
+Lamb Roshni
+Lamb Shashlick
+Lamb Shashlick Curry
+Lamb Shaslick
+Lamb Sylhet
+Lamb Tikka
+Lamb Tikka (Main)
+Lamb Tikka Balti
+Lamb Tikka Biryani
+Lamb Tikka Chilli Masala
+Lamb Tikka Garlic
+Lamb Tikka Jalfrezi
+Lamb Tikka Jeera
+Lamb Tikka Karahi
+Lamb Tikka Masala
+Lamb Tikka Pasanda
+Lamb Tikka Sizzler
+Lemon Rice
+Lemonade 1.5 ltr
+Lime Pickle
+Madras
+Madras - Chicken
+Madras - Chicken Tikka
+Madras - King Prawn
+Madras - Lamb
+Madras - Prawn
+Madras - chicken
+Madras - chicken-tikka
+Madras - king-prawn
+Madras - lamb
+Madras - prawn
+Madras Sauce
+Malaya
+Malaya - Chicken
+Malaya - Chicken Tikka
+Malaya - Lamb
+Malaya - Prawn
+Malaya - chicken
+Malaya - chicken-tikka
+Mango Chutney
+Masala Sauce
+Meat Samosa
+Methi
+Methi - Chicken
+Methi - Chicken Tikka
+Methi - King Prawn
+Methi - Lamb
+Methi - Prawn
+Methi - chicken
+Methi - king-prawn
+Methi - lamb
+Mini Bhaji
+Mint Sauce
+Mix Starter
+Mixed Raita
+Mixed Starter
+Mixed Vegetable Curry
+Murgh Masala
+Mushroom
+Mushroom - Chicken
+Mushroom - Chicken Tikka
+Mushroom - King Prawn
+Mushroom - Lamb
+Mushroom - Prawn
+Mushroom - chicken
+Mushroom - chicken-tikka
+Mushroom - lamb
+Mushroom Bhajee
+Mushroom Rice
+Muttar Paneer
+Naan
+Onion Bhajee
+Onion Bhaji
+Onion Chutney
+Onion Naan
+Onion Rice
+Paneer Dansak
+Paneer Karahi
+Paneer Kurma
+Paneer Pakora
+Paneer Shaslick
+Paneer Sizzler
+Paneer Tikka Balti
+Paneer Tikka Karahi
+Paneer Tikka Masala
+Paneer Tikka Sizzler
+Paner Pakora
+Paratha
+Pathia
+Pathia - Chicken
+Pathia - Chicken Tikka
+Pathia - King Prawn
+Pathia - Lamb
+Pathia - Prawn
+Pathia - chicken
+Pathia - chicken-tikka
+Pathia - king-prawn
+Pathia - lamb
+Pathia - prawn
+Perrier Water (750ml)
+Perrier Water 75cl
+Persian Chicken Biryani
+Persian Lamb Biryani
+Peshwari Naan
+Pilau Rice
+Plain Naan
+Plain Papadum
+Plain Rice
+Prawn Balti
+Prawn Biryani
+Prawn Karahi
+Prawn Puree
+Prier Water (750ml)
+Puree
+Raitha
+Red Sauce
+Rogon
+Rogon - Chicken
+Rogon - Chicken Tikka
+Rogon - King Prawn
+Rogon - Lamb
+Rogon - Prawn
+Rogon - chicken
+Rogon - chicken-tikka
+Rogon - lamb
+Royal Paneer
+Saag
+Saag - Chicken
+Saag - Chicken Tikka
+Saag - King Prawn
+Saag - Lamb
+Saag - Prawn
+Saag - chicken
+Saag - chicken-tikka
+Saag - king-prawn
+Saag - lamb
+Saag Aloo
+Saag Bhajee
+Saag Dall
+Saag Paneer
+Saag Rice
+Sheek Kebab
+Sheek Kebab (Main)
+Sheek Kehab
+Special Fried Rice
+Spicy Papadum
+Still Water (750ml)
+Stuffed Paratha
+Tandoori Chicken
+Tandoori Chicken (1/4)
+Tandoori Chicken (Main)
+Tandoori Chicken Masala
+Tandoori Fish
+Tandoori Fish (Main)
+Tandoori Fish Jalfrezi
+Tandoori Fish Karahi
+Tandoori King Prawn Garlic
+Tandoori King Prawn Masala
+Tandoori Mixed Grill
+Tandoori Paratha
+Tandoori Roti
+Tarka Dall
+Vegetable Balti
+Vegetable Bhuna
+Vegetable Biryani
+Vegetable Curry
+Vegetable Dansak
+Vegetable Jalfrezi
+Vegetable Karahi
+Vegetable Korma
+Vegetable Masala
+Vegetable Mysore
+Vegetable Rice
+Vegetable Roll
+Vegetable Samba
+Vegetable Samosa
+Vindaloo
+Vindaloo - Chicken
+Vindaloo - Chicken Tikka
+Vindaloo - King Prawn
+Vindaloo - Lamb
+Vindaloo - Prawn
+Vindaloo - chicken
+Vindaloo - chicken-tikka
+Vindaloo - king-prawn
+Vindaloo - lamb
+Vindaloo - prawn
+Vindaloo Sauce

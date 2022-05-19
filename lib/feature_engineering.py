@@ -4,6 +4,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import scale
 import pandas as pd
 import seaborn as sns
+from scipy import stats
 
 def getVarianceLowColumns(df, threshold=0.1):
     
@@ -165,3 +166,14 @@ def bucket_feature(df_original, column_name, target=None, custom_bins_feature=No
         sns.barplot(x=count_band_age_churn.index, y=count_band_age_churn[target[0]])
         
     return df
+
+
+def get_any_all_outliers(df:pd.DataFrame, cols_numerical_detect_outliers:list):
+
+    matrix_zscore_abs = np.abs(stats.zscore(df.loc[:, cols_numerical_detect_outliers]))
+    nan_propagation_count = np.isnan(matrix_zscore_abs).sum()
+    # If this assertion fails, check the columns to not be constant, nan, etc.
+    assert nan_propagation_count == 0
+    outliers_any_col = (matrix_zscore_abs >= 3).any(axis=1)  # check all row
+    outliers_all_col = (matrix_zscore_abs >= 3).all(axis=1)  # check all row
+    return matrix_zscore_abs, outliers_any_col, outliers_all_col
