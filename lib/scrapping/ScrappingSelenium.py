@@ -10,7 +10,6 @@ import os
 from IPython.display import clear_output
 import undetected_chromedriver as uc
 
-import json
 import pandas as pd
 import signal
 import sys
